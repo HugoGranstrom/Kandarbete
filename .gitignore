@@ -1,0 +1,8 @@
+imgs/
+train/
+valid/
+__pycache__/
+board.png
+lanczos.png
+result.png
+test.jpg
