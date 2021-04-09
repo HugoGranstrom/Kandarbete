@@ -85,3 +85,9 @@ class UNet(nn.Module):
     encoder_features = self.encoder(x)
     out = self.decoder(encoder_features[::-1][0], encoder_features[::-1][1:])
     return out
+
+if __name__ == "__main__":
+  x = torch.randn(4, 3, 192, 256)
+  net = UNet(depth=5)
+  y = net(x)
+  print(y.shape)
