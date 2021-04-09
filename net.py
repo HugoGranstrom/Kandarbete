@@ -29,12 +29,13 @@ class Net(nn.Module):
 
 
 
-def saveNet(filename, net, optimizer, iteration, loss):
+def saveNet(filename, net, optimizer, iterations, train_loss, val_loss):
   torch.save({
       "net": net.state_dict(),
       "optimizer": optimizer.state_dict(),
-      "iteration": iteration,
-      "loss": loss
+      "iteration": iterations,
+      "loss": train_loss,
+      "val_loss": val_loss
   }, filename)
 
 def loadNet(filename, net, optimizer, device):
@@ -43,12 +44,13 @@ def loadNet(filename, net, optimizer, device):
     net.load_state_dict(checkpoint["net"])
     optimizer.load_state_dict(checkpoint["optimizer"])
     iteration = checkpoint["iteration"]
-    loss = checkpoint["loss"]
-    print(f"Net loaded from memory! Starting on iteration {iteration} with loss {loss}")
-    return iteration, loss
+    train_loss = checkpoint["loss"]
+    val_loss = checkpoint["val_loss"]
+    print(f"Net loaded from memory! Starting on iteration {iteration[-1]+1} with train-loss {train_loss[-1]}")
+    return iteration, train_loss, val_loss
   except (OSError, FileNotFoundError):
     print(f"Couldn't find {filename}, creating new net!")
-    return -1, 1e6
+    return [], [], []
 
 def loadNetEval(filename, net, device):
   try:

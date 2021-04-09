@@ -98,16 +98,20 @@ if __name__ == '__main__':
 
 
   lr_min = 0.0001
-  lr_max = 0.001
+  lr_max = 0.0005
 
   net = UNet(depth=4).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=lr_min)
 
   filename = "net_UNet_v2.pt"
 
-  iteration, best_loss = loadNet(filename, net, optimizer, device)
-
-  scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.0001, max_lr=0.001, step_size_up=500, last_epoch=iteration, mode="triangular", cycle_momentum=False)
+  iterations, train_losses, val_losses = loadNet(filename, net, optimizer, device)
+  print("Iterations:", iterations)
+  print("Validation:", val_losses)
+  print("Training:", train_losses)
+  best_loss = min(val_losses) if len(val_losses) > 0 else 1e6
+  iteration = iterations[-1] if len(iterations) > 0 else -1
+  scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=lr_min, max_lr=lr_max, step_size_up=2000, last_epoch=iteration, mode="triangular", cycle_momentum=False)
 
   net.train()
   net.to(device)
@@ -125,10 +129,13 @@ if __name__ == '__main__':
   validloader = DataLoader(validdata, batch_size=8)
   validation_size = len(validdata)/8
   """
-
+  
+  print_every = 1
+  save_every = 1
   for epoch in range(1000):  # loop over the dataset multiple times
 
       running_loss = 0.0
+      train_loss = 0.0
       for i, data in enumerate(dataset, iteration+1):
           # get the inputs; data is a list of [inputs, labels]
           inputs, labels = data
@@ -146,15 +153,16 @@ if __name__ == '__main__':
           optimizer.step()
           scheduler.step()
           running_loss += loss.item()
-          
+          train_loss += loss.item()
           # print statistics
-          print_every = 1
           if i % print_every == print_every-1:
               print('[%d, %5d] loss: %.4f' %
                     (epoch + 1, i + 1, running_loss / print_every))
               running_loss = 0.0
-          save_every = 80
           if i % save_every == save_every-1:
+            train_losses.append(train_loss / save_every)
+            train_loss = 0.0
+            iterations.append(i)
             with torch.no_grad():
               net.eval()
               percep_loss = 0
@@ -171,12 +179,15 @@ if __name__ == '__main__':
               percep_loss /= validation_size
               pixel_loss /= validation_size
               validation_loss = percep_loss + pixel_loss
+              val_losses.append(validation_loss)
               
               print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "Perceptual:", percep_loss, "lr:", scheduler.get_last_lr())
               net.train()
               if validation_loss < best_loss:
+                saveNet(filename + "_best", net, optimizer, iterations, train_losses, val_losses)
+                print(f"New best loss: {best_loss} -> {validation_loss}")
                 best_loss = validation_loss
-                saveNet(filename, net, optimizer, i+1, best_loss)
-                print(f"Saving model, new best loss: {best_loss} -> {validation_loss}")
+              saveNet(filename, net, optimizer, iterations, train_losses, val_losses)
+              print("Saved model!")
               
                 
