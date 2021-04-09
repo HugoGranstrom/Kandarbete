@@ -86,7 +86,7 @@ def perceptual_loss(y, y_hat, vgg):
 if __name__ == '__main__':
   torch.multiprocessing.freeze_support()
 
-  csvfile = pd.read_csv("https://raw.githubusercontent.com/HugoGranstrom/Kandarbete/main/ImageUID.csv", names=["id"])
+  csvfile = pd.read_csv("ImageUID.csv", names=["id"])
   ids = csvfile["id"].values
   print(len(ids))
 
@@ -100,7 +100,7 @@ if __name__ == '__main__':
   lr_min = 0.0001
   lr_max = 0.001
 
-  net = UNet(depth=4, batch_norm=False).to(device)
+  net = UNet(depth=4).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=lr_min)
 
   filename = "net_UNet_v2.pt"
@@ -114,24 +114,22 @@ if __name__ == '__main__':
   validation_size = 100
   vgg = Vgg16(requires_grad=False).to(device).eval()
 
-  #dataset = OpenDataset(ids[:-validation_size], batch_size=15, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
-  #validation_dataset = OpenDataset(ids[-validation_size:], batch_size=15, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
-  
-  traindata = FolderSet("train")
+  dataset = OpenDataset(ids[:-validation_size], batch_size=15, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
+  validation_dataset = OpenDataset(ids[-validation_size:], batch_size=15, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
+  validation_data = [i for i in validation_dataset]
+  validation_size = len(validation_data)
+  """traindata = FolderSet("train")
   validdata = FolderSet("valid")
 
   trainloader = DataLoader(traindata, batch_size=10, num_workers = 7)
   validloader = DataLoader(validdata, batch_size=8)
   validation_size = len(validdata)/8
+  """
 
   for epoch in range(1000):  # loop over the dataset multiple times
 
       running_loss = 0.0
-      for i, data in enumerate(trainloader, iteration+1):
-          #  lr_new = lr_min + (lr_max - lr_min) * math.exp(-i/7000)
-          #  print("lr:", lr_new)
-          #  for p in optimizer.param_groups:
-          #    p['lr'] = lr_new
+      for i, data in enumerate(dataset, iteration+1):
           # get the inputs; data is a list of [inputs, labels]
           inputs, labels = data
           inputs = inputs.to(device)
@@ -141,12 +139,7 @@ if __name__ == '__main__':
 
           # forward + backward + optimize
           outputs = net(inputs)
-          
-          #features_y = vgg(labels)
-          #features_outputs = vgg(outputs)
-          #loss = 0.5 * torch.mean((features_y.relu2_2 - features_outputs.relu2_2)**2)
-          #loss += torch.mean(torch.abs(outputs - labels))
-          #loss += torch.mean((outputs - labels) ** 2)
+
           loss = perceptual_loss(outputs, labels, vgg)
           loss += F.l1_loss(outputs, labels)
           loss.backward()
@@ -155,7 +148,7 @@ if __name__ == '__main__':
           running_loss += loss.item()
           
           # print statistics
-          print_every = 10
+          print_every = 1
           if i % print_every == print_every-1:
               print('[%d, %5d] loss: %.4f' %
                     (epoch + 1, i + 1, running_loss / print_every))
@@ -166,13 +159,10 @@ if __name__ == '__main__':
               net.eval()
               percep_loss = 0
               pixel_loss = 0
-              for inputs, labels in validloader:
+              for inputs, labels in validation_data:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 outputs_val = net(inputs)
-                #features_y = vgg(labels)
-                #features_outputs = vgg(outputs)
-                #per_loss = 0.5 * torch.mean((features_y.relu2_2 - features_outputs.relu2_2)**2)
                 per_loss = perceptual_loss(outputs_val, labels, vgg)
                 pix_loss = F.l1_loss(outputs_val, labels)
                 percep_loss += per_loss.item()
@@ -184,7 +174,7 @@ if __name__ == '__main__':
               
               print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "Perceptual:", percep_loss, "lr:", scheduler.get_last_lr())
               net.train()
-              if True:
+              if validation_loss < best_loss:
                 best_loss = validation_loss
                 saveNet(filename, net, optimizer, i+1, best_loss)
                 print(f"Saving model, new best loss: {best_loss} -> {validation_loss}")
