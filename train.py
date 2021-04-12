@@ -103,13 +103,13 @@ if __name__ == '__main__':
   net = UNet(depth=5).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=lr_min)
 
-  filename = "net_UNet.pt"
+  filename = "UNet_hsv_v1.pt"
 
   iterations, train_losses, val_losses = loadNet(filename, net, optimizer, device)
   best_loss = min(val_losses) if len(val_losses) > 0 else 1e6
   print("Best validation loss:", best_loss)
   iteration = iterations[-1] if len(iterations) > 0 else -1
-  scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=lr_min, max_lr=lr_max, step_size_up=2000, last_epoch=iteration, mode="triangular", cycle_momentum=False)
+  scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=lr_min, max_lr=lr_max, step_size_up=5000, last_epoch=iteration, mode="triangular2", cycle_momentum=False)
 
   net.train()
   net.to(device)
@@ -128,8 +128,8 @@ if __name__ == '__main__':
   validation_size = len(validdata)/8
   """
   
-  print_every = 1
-  save_every = 1
+  print_every = 100
+  save_every = 500
   for epoch in range(1000):  # loop over the dataset multiple times
 
       running_loss = 0.0
@@ -145,8 +145,8 @@ if __name__ == '__main__':
           # forward + backward + optimize
           outputs = net(inputs)
 
-          loss = perceptual_loss(outputs, labels, vgg)
-          loss += F.l1_loss(outputs, labels)
+          #loss = perceptual_loss(outputs, labels, vgg)
+          loss = F.l1_loss(outputs, labels)
           loss.backward()
           optimizer.step()
           scheduler.step()
@@ -170,17 +170,17 @@ if __name__ == '__main__':
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 outputs_val = net(inputs)
-                per_loss = perceptual_loss(outputs_val, labels, vgg)
+                #per_loss = perceptual_loss(outputs_val, labels, vgg)
                 pix_loss = F.l1_loss(outputs_val, labels)
-                percep_loss += per_loss.item()
+                #percep_loss += per_loss.item()
                 pixel_loss += pix_loss.item()
 
-              percep_loss /= validation_size
+              #percep_loss /= validation_size
               pixel_loss /= validation_size
-              validation_loss = percep_loss + pixel_loss
+              validation_loss = pixel_loss #+ percep_loss
               val_losses.append(validation_loss)
               
-              print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "Perceptual:", percep_loss, "lr:", scheduler.get_last_lr())
+              print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "lr:", scheduler.get_last_lr()) # "Perceptual:", percep_loss
               net.train()
               if validation_loss < best_loss:
                 saveNet(filename + "_best", net, optimizer, iterations, train_losses, val_losses)

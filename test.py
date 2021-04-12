@@ -13,9 +13,9 @@ print('cuda' if torch.cuda.is_available() else 'cpu')
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 device = 'cpu'
 
-filename = "net_UNet_v2.pt"
+filename = "UNet_hsv_v1.pt_best"
 
-net = UNet(depth=4)
+net = UNet(depth=5)
 loadNetEval(filename, net, device)
 #loadNetEval("/content/drive/MyDrive/Colab Notebooks/" + filename, net, device)
 net.to(device)
@@ -53,10 +53,12 @@ def compat_pad(image, network_depth):
 
 def predict(image, net, device):
   with torch.no_grad():
+    im = image.convert("HSV")
     im, padding, original_width, original_height = compat_pad(image, 4)
     y = net(transforms.ToTensor()(im).unsqueeze(0).to(device)).squeeze()
     y = transforms.functional.crop(y, 2*padding[1], 2*padding[0], 2*original_height, 2*original_width)
     im = transforms.ToPILImage()(y)
+    im = im.convert("RGB")
     return im
 
 with torch.no_grad():
