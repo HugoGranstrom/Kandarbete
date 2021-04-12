@@ -11,9 +11,8 @@ if imf == "":
 print('cuda' if torch.cuda.is_available() else 'cpu')
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = 'cpu'
 
-filename = "UNet_hsv_v1.pt_best"
+filename = "UNet_hsv_v2.pt_best"
 
 net = UNet(depth=5)
 loadNetEval(filename, net, device)

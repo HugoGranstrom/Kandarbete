@@ -77,8 +77,13 @@ def perceptual_loss(y, y_hat, vgg):
   normalize = transforms.Normalize(mean.tolist(), std.tolist())
   unnormalize = transforms.Normalize((-mean / std).tolist(), (1.0 / std).tolist())
 
-  features_y = vgg(normalize(y))
-  features_y_hat = vgg(normalize(y_hat))
+  v_y = y[:, 2, :, :].unsqueeze(1)
+  v_dup_y = v_y.expand(-1, 3, -1, -1)
+  v_hat = y_hat[:, 2, :, :].unsqueeze(1)
+  v_dup_hat = v_hat.expand(-1, 3, -1, -1)
+
+  features_y = vgg(normalize(v_dup_y))
+  features_y_hat = vgg(normalize(v_dup_hat))
   loss = 0.5 * F.mse_loss(features_y_hat.relu2_2, features_y.relu2_2)
   return loss
 
@@ -103,7 +108,7 @@ if __name__ == '__main__':
   net = UNet(depth=5).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=lr_min)
 
-  filename = "UNet_hsv_v1.pt"
+  filename = "UNet_hsv_v2.pt"
 
   iterations, train_losses, val_losses = loadNet(filename, net, optimizer, device)
   best_loss = min(val_losses) if len(val_losses) > 0 else 1e6
@@ -114,7 +119,7 @@ if __name__ == '__main__':
   net.train()
   net.to(device)
   validation_size = 100
-  #vgg = Vgg16(requires_grad=False).to(device).eval()
+  vgg = Vgg16(requires_grad=False).to(device).eval()
 
   dataset = OpenDataset(ids[:-validation_size], batch_size=15, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_dataset = OpenDataset(ids[-validation_size:], batch_size=15, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
@@ -145,8 +150,8 @@ if __name__ == '__main__':
           # forward + backward + optimize
           outputs = net(inputs)
 
-          #loss = perceptual_loss(outputs, labels, vgg)
-          loss = F.l1_loss(outputs, labels)
+          loss = perceptual_loss(outputs, labels, vgg)
+          loss += F.l1_loss(outputs, labels)
           loss.backward()
           optimizer.step()
           scheduler.step()
@@ -170,17 +175,17 @@ if __name__ == '__main__':
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 outputs_val = net(inputs)
-                #per_loss = perceptual_loss(outputs_val, labels, vgg)
+                per_loss = perceptual_loss(outputs_val, labels, vgg)
                 pix_loss = F.l1_loss(outputs_val, labels)
-                #percep_loss += per_loss.item()
+                percep_loss += per_loss.item()
                 pixel_loss += pix_loss.item()
 
-              #percep_loss /= validation_size
+              percep_loss /= validation_size
               pixel_loss /= validation_size
-              validation_loss = pixel_loss #+ percep_loss
+              validation_loss = pixel_loss + percep_loss
               val_losses.append(validation_loss)
               
-              print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "lr:", scheduler.get_last_lr()) # "Perceptual:", percep_loss
+              print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "lr:", scheduler.get_last_lr(), "Perceptual:", percep_loss)
               net.train()
               if validation_loss < best_loss:
                 saveNet(filename + "_best", net, optimizer, iterations, train_losses, val_losses)
