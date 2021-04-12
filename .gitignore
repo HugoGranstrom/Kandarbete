@@ -6,3 +6,8 @@ board.png
 lanczos.png
 result.png
 test.jpg
+net_UNet_v2.pt
+_net_UNet_v2.pt
+net_UNet_v2.pt_best
+*.png
+*.jpg
