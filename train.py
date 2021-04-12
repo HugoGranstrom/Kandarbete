@@ -100,16 +100,14 @@ if __name__ == '__main__':
   lr_min = 0.0001
   lr_max = 0.0005
 
-  net = UNet(depth=4).to(device)
+  net = UNet(depth=5).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=lr_min)
 
-  filename = "net_UNet_v2.pt"
+  filename = "net_UNet.pt"
 
   iterations, train_losses, val_losses = loadNet(filename, net, optimizer, device)
-  print("Iterations:", iterations)
-  print("Validation:", val_losses)
-  print("Training:", train_losses)
   best_loss = min(val_losses) if len(val_losses) > 0 else 1e6
+  print("Best validation loss:", best_loss)
   iteration = iterations[-1] if len(iterations) > 0 else -1
   scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=lr_min, max_lr=lr_max, step_size_up=2000, last_epoch=iteration, mode="triangular", cycle_momentum=False)
 
@@ -157,10 +155,11 @@ if __name__ == '__main__':
           # print statistics
           if i % print_every == print_every-1:
               print('[%d, %5d] loss: %.4f' %
-                    (epoch + 1, i + 1, running_loss / print_every))
+                    (epoch, i, running_loss / print_every))
               running_loss = 0.0
           if i % save_every == save_every-1:
             train_losses.append(train_loss / save_every)
+            print("Training loss:", train_loss / save_every)
             train_loss = 0.0
             iterations.append(i)
             with torch.no_grad():
