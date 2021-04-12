@@ -114,7 +114,7 @@ if __name__ == '__main__':
   net.train()
   net.to(device)
   validation_size = 100
-  vgg = Vgg16(requires_grad=False).to(device).eval()
+  #vgg = Vgg16(requires_grad=False).to(device).eval()
 
   dataset = OpenDataset(ids[:-validation_size], batch_size=15, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_dataset = OpenDataset(ids[-validation_size:], batch_size=15, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
