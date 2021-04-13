@@ -133,8 +133,8 @@ if __name__ == '__main__':
   validation_size = len(validdata)/8
   """
   
-  print_every = 1
-  save_every = 1
+  print_every = 100
+  save_every = 500
   for epoch in range(1000):  # loop over the dataset multiple times
 
       running_loss = 0.0
