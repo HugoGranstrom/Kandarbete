@@ -51,17 +51,25 @@ class ToLabTensor:
       pass
 
     def __call__(self, x):
+      x = np.asarray(x, dtype=np.float32) / 255
       Lab = color.rgb2lab(x) # convert PIL -> numpy array
       Lab_torch = torch.from_numpy(Lab).float() # convert numpy -> torch
       Lab_permute = Lab_torch.permute(2, 0, 1) # move channels from last to first dimension
+      Lab_permute[0, :, :] /= 100
+      Lab_permute[1, :, :] /= 128
+      Lab_permute[2, :, :] /= 128
       return Lab_permute
 
 def TorchLab2RGBImg(x):
   """Convert a Lab Torch Tensor to a RGB PIL Image"""
+  x = x
+  x[0, :, :] *= 100
+  x[1, :, :] *= 128
+  x[2, :, :] *= 128
   x_permute = x.permute(1, 2, 0)
-  x_np = x_permute.numpy()
+  x_np = x_permute.cpu().numpy()
   x_rgb = color.lab2rgb(x_np)
-  im = Image.fromarray(x_rgb, "RGB")
+  im = Image.fromarray(np.uint8(x_rgb*255), "RGB")
   return im
 
 class OpenDataset:
