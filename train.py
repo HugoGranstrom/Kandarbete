@@ -142,7 +142,6 @@ if __name__ == '__main__':
       for i, data in enumerate(dataset, iteration+1):
           # get the inputs; data is a list of [inputs, labels]
           inputs, labels = data
-          print("INput dtype:", inputs.dtype)
           inputs = inputs.to(device)
           labels = labels.to(device)
           # zero the parameter gradients
