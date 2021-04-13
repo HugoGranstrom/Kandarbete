@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from skimage import color, io
 from dataset import *
 from net import *
 from unet import *
@@ -52,12 +53,12 @@ def compat_pad(image, network_depth):
 
 def predict(image, net, device):
   with torch.no_grad():
-    im = image.convert("LAB")
     im, padding, original_width, original_height = compat_pad(image, 4)
-    y = net(transforms.ToTensor()(im).unsqueeze(0).to(device)).squeeze()
+    y = net(ToLabTensor()(im).unsqueeze(0).to(device)).squeeze()
     y = transforms.functional.crop(y, 2*padding[1], 2*padding[0], 2*original_height, 2*original_width)
-    im = transforms.ToPILImage("LAB")(y)
-    im = im.convert("RGB")
+    im = TorchLab2RGBImg(y)
+    #im = transforms.ToPILImage("LAB")(y)
+    #im = im.convert("RGB")
     return im
 
 with torch.no_grad():

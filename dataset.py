@@ -24,6 +24,8 @@ import pandas as pd
 
 import random
 
+from skimage import color, io
+
 def download_one_image(bucket, split, image_id, download_folder):
   try:
     bucket.download_file(f'{split}/{image_id}.jpg',
@@ -41,6 +43,26 @@ class NinetiesRotation:
     def __call__(self, x):
         angle = random.choice(self.angles)
         return transforms.functional.rotate(x, angle)
+
+class ToLabTensor:
+    """Convert a PIL image to Torch Tensor"""
+
+    def __init__(self):
+      pass
+
+    def __call__(self, x):
+      Lab = color.rgb2lab(x) # convert PIL -> numpy array
+      Lab_torch = torch.from_numpy(Lab).float() # convert numpy -> torch
+      Lab_permute = Lab_torch.permute(2, 0, 1) # move channels from last to first dimension
+      return Lab_permute
+
+def TorchLab2RGBImg(x):
+  """Convert a Lab Torch Tensor to a RGB PIL Image"""
+  x_permute = x.permute(1, 2, 0)
+  x_np = x_permute.numpy()
+  x_rgb = color.lab2rgb(x_np)
+  im = Image.fromarray(x_rgb, "RGB")
+  return im
 
 class OpenDataset:
   def __init__(this, ids, batch_size,SUPER_BATCHING = 30, high_res_size = (200, 200), low_res_size = (100, 100)):
@@ -71,7 +93,7 @@ class OpenDataset:
     this.X_transforms = transforms.Compose([
                                             transforms.Resize(low_res_size, transforms.InterpolationMode.BILINEAR)
                                             ])
-    this.toTensor = transforms.Compose([transforms.ToTensor()])
+    this.toTensor = transforms.Compose([ToLabTensor()])
     try:
       os.mkdir("imgs")
     except OSError:
@@ -107,7 +129,7 @@ class OpenDataset:
     if not os.path.isfile(f"imgs/{id}.jpg"): # Check if already downloaded.
       download_one_image(this.bucket,"train",id,"imgs")
     im = Image.open(f"imgs/{id}.jpg")
-    im = im if im.mode == "LAB" else im.convert("LAB")
+    im = im if im.mode == "RGB" else im.convert("RGB")
     return im
 
   def _batch_process(this):
