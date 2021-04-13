@@ -8,7 +8,7 @@ xyz_from_rgb = torch.tensor([[0.412453, 0.357580, 0.180423],
 
 rgb_from_xyz = torch.inverse(xyz_from_rgb)
 
-white_ref = torch.tensor((0.95047, 1., 1.08883))
+white_ref = torch.tensor((0.95047, 1., 1.08883)).view(1, 3, 1, 1)
 
 def lab2xyz(lab): #
   L, a, b = lab[:,0,:,:],lab[:,1,:,:],lab[:,2,:,:]
@@ -16,38 +16,52 @@ def lab2xyz(lab): #
   y = (L + 16.) / 116.
   x = (a / 500.) + y
   z = y - (b / 200.)
+  print(b)
+  print("z:", torch.sum(torch.isnan(a / 500. + y)))
   
-  if torch.any(z < 0):
-      invalid = torch.nonzero(z < 0) #Out of colorrange
-      z[invalid] = 0
-  
-  out = torch.stack([x, y, z])
-  
+  z[z<0]=0
+
+  out = torch.stack([x, y, z], dim=1)
   mask = out > 0.2068966
   out[mask] = torch.pow(out[mask], 3.)
   out[~mask] = (out[~mask] - 16.0 / 116.) / 7.787
   
   # rescale to the reference white (illuminant)
-  out *= white_ref
+  out = out * white_ref
+  
   return out
     
 def xyz2rgb(xyz):
-  arr = torch.matmul(xyz.view(-1,3),rgb_from_xyz).view(xyz.shape)
+  shape = torch.tensor(xyz.shape)[ [0,2,3] ]
+  shape = list(shape)
+  xyz_ = torch.stack([xyz[:,0,:,:].view(-1), xyz[:,1,:,:].view(-1), xyz[:,2,:,:].view(-1)], dim=1)
+  
+  mul = torch.matmul(xyz_, rgb_from_xyz)
+  
+  x,y,z = mul[:,0].view(shape), mul[:,1].view(shape), mul[:,2].view(shape)
+
+  arr = torch.stack([x,y,z],dim=1)
+  
+  
   mask = arr > 0.0031308
   arr[mask] = 1.055 * torch.pow(arr[mask], 1 / 2.4) - 0.055
-  arr[~mask] *= 12.92
+  arr[~mask] = arr[~mask] / 12.92
   torch.clip(arr, 0, 1, out=arr)
   return arr
 
 def lab2rgb(lab):
-  return xyz2rgb(lab2xyz(lab))
+  x = lab.clone()
+  x[:, 0, :, :] *= 100
+  x[:, 1, :, :] *= 128
+  x[:, 2, :, :] *= 128
+  return xyz2rgb(lab2xyz(x))
 
 
 def rgb2xyz(rgb):
   arr = rgb
   mask = rgb > 0.04045
   arr[mask] = torch.pow((arr[mask] + 0.055) / 1.055, 2.4)
-  arr[~mask] /= 12.92
+  arr[~mask] = arr[~mask] / 12.92
   
   shape = arr.shape[ [0,2,3] ]
   rgb_ = torch.stack([arr[:,0,:,:].view(-1),arr[:,1,:,:].view(-1),arr[:,2,:,:].view(-1)], dim=1)
