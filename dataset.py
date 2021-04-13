@@ -107,7 +107,7 @@ class OpenDataset:
     if not os.path.isfile(f"imgs/{id}.jpg"): # Check if already downloaded.
       download_one_image(this.bucket,"train",id,"imgs")
     im = Image.open(f"imgs/{id}.jpg")
-    im = im if im.mode == "HSV" else im.convert("HSV")
+    im = im if im.mode == "LAB" else im.convert("LAB")
     return im
 
   def _batch_process(this):
