@@ -61,10 +61,11 @@ def rgb2xyz(rgb):
   arr[mask] = torch.pow((arr[mask] + 0.055) / 1.055, 2.4)
   arr[~mask] = arr[~mask] / 12.92
   
-  shape = arr.shape[ [0,2,3] ]
+  shape = torch.tensor(arr.shape)[ [0,2,3] ]
+  shape = list(shape)
   rgb_ = torch.stack([arr[:,0,:,:].view(-1),arr[:,1,:,:].view(-1),arr[:,2,:,:].view(-1)], dim=1)
   
-  mul = torch.matmul(rgb_, xyz_from_rgb)
+  mul = torch.matmul(rgb_, xyz_from_rgb.T)
   
   x,y,z = mul[:,0].view(shape), mul[:,1].view(shape), mul[:,2].view(shape)
   return torch.stack([x,y,z],dim=1)
