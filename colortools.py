@@ -17,8 +17,6 @@ def lab2xyz(lab, device): # funkar!
   x = (a / 500.) + y
   z = y - (b / 200.)
   
-  if torch.any(z<0):
-    print("Any!", torch.sum(z<0))
   z[z<0]=0
 
   out = torch.stack([x, y, z], dim=1)
