@@ -59,9 +59,9 @@ class ToLabTensor:
       Lab_permute = Lab_permute / lab_scaling
       return Lab_permute
 
-def TorchLab2RGBImg(x):
+def TorchLab2RGBImg(x, device):
   """Convert a Lab Torch Tensor to a RGB PIL Image"""
-  lab_scaling = torch.tensor([100, 128, 128]).float().view(3, 1, 1)
+  lab_scaling = torch.tensor([100, 128, 128]).float().view(3, 1, 1).to(device)
   x_scaled = x * lab_scaling
   x_permute = x_scaled.permute(1, 2, 0)
   x_np = x_permute.cpu().numpy()
@@ -69,9 +69,9 @@ def TorchLab2RGBImg(x):
   im = Image.fromarray(np.uint8(x_rgb*255), "RGB")
   return im
 
-def TorchLab2RGB(x):
+def TorchLab2RGB(x, device):
   """Convert a Lab Torch Tensor to a RGB Torch Tensor with range (0, 1)"""
-  lab_scaling = torch.tensor([100, 128, 128]).float().view(3, 1, 1)
+  lab_scaling = torch.tensor([100, 128, 128]).float().view(3, 1, 1).to(device)
   x_scaled = x * lab_scaling
   x_permute = x_scaled.permute(1, 2, 0)
   x_np = x_permute.cpu().numpy()
