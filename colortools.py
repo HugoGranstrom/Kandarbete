@@ -21,8 +21,9 @@ def lab2xyz(lab, device): # funkar!
 
   out = torch.stack([x, y, z], dim=1)
   mask = out > 0.2068966
-  out[mask] = torch.pow(out[mask], 3.)
-  out[~mask] = (out[~mask] - 16.0 / 116.) / 7.787
+  #out[mask] = torch.pow(out[mask], 3.)
+  #out[~mask] = (out[~mask] - 16.0 / 116.) / 7.787
+  out = torch.pow(out * mask, 3.) + (out * (~mask) - (~mask) * 16.0 / 116.) / 7.787
   
   # rescale to the reference white (illuminant)
   out = out * white_ref.to(device)
@@ -42,8 +43,9 @@ def xyz2rgb(xyz, device): # funkar!
   
   
   mask = arr > 0.0031308
-  arr[mask] = 1.055 * torch.pow(arr[mask], 1 / 2.4) - 0.055
-  arr[~mask] = arr[~mask] / 12.92
+  #arr[mask] = 1.055 * torch.pow(arr[mask], 1 / 2.4) - 0.055
+  #arr[~mask] = arr[~mask] / 12.92
+  arr = 1.055 * torch.pow(arr * mask, 1 / 2.4) - 0.055 + arr * (~mask) / 12.92
   arr = torch.clip(arr, 0, 1)
   return arr
 
