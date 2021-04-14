@@ -71,15 +71,15 @@ class Vgg16(torch.nn.Module):
         out = vgg_outputs(h_relu1_2, h_relu2_2, h_relu3_3, h_relu4_3)
         return out
 
-def perceptual_loss(y, y_hat, vgg):
+def perceptual_loss(y, y_hat, vgg, device):
   """Normalizes y and y_hat, runs them through vgg and compares intermediate layers and returns the perceptual loss"""
   mean = torch.tensor([0.485, 0.456, 0.406])
   std = torch.tensor([0.229, 0.224, 0.225]) # the biggest value that can be normalized to is 2.64
   normalize = transforms.Normalize(mean.tolist(), std.tolist())
   unnormalize = transforms.Normalize((-mean / std).tolist(), (1.0 / std).tolist())
 
-  y_rgb = lab2rgb(y)
-  y_hat_rgb = lab2rgb(y_hat)
+  y_rgb = lab2rgb(y, device)
+  y_hat_rgb = lab2rgb(y_hat, device)
 
   features_y = vgg(normalize(y_rgb))
   features_y_hat = vgg(normalize(y_hat_rgb))
@@ -149,7 +149,7 @@ if __name__ == '__main__':
           # forward + backward + optimize
           outputs = net(inputs)
 
-          loss = perceptual_loss(outputs, labels, vgg)
+          loss = perceptual_loss(outputs, labels, vgg, device)
           #loss = F.l1_loss(outputs, labels)
           loss += F.mse_loss(outputs, labels)
           loss.backward()
@@ -175,7 +175,7 @@ if __name__ == '__main__':
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 outputs_val = net(inputs)
-                per_loss = perceptual_loss(outputs_val, labels, vgg)
+                per_loss = perceptual_loss(outputs_val, labels, vgg, device)
                 pix_loss = F.mse_loss(outputs_val, labels)
                 percep_loss += per_loss.item()
                 pixel_loss += pix_loss.item()
