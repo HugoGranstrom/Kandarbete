@@ -45,7 +45,7 @@ class NinetiesRotation:
         return transforms.functional.rotate(x, angle)
 
 class ToLabTensor:
-    """Convert a PIL image to Torch Tensor"""
+    """Convert a PIL image to Torch Tensor encoded using LAB"""
 
     def __init__(self):
       pass
@@ -55,22 +55,31 @@ class ToLabTensor:
       Lab = color.rgb2lab(x) # convert PIL -> numpy array
       Lab_torch = torch.from_numpy(Lab).float() # convert numpy -> torch
       Lab_permute = Lab_torch.permute(2, 0, 1) # move channels from last to first dimension
-      Lab_permute[0, :, :] /= 100
-      Lab_permute[1, :, :] /= 128
-      Lab_permute[2, :, :] /= 128
+      lab_scaling = torch.tensor([100, 128, 128]).float().view(3, 1, 1)
+      Lab_permute = Lab_permute / lab_scaling
       return Lab_permute
 
 def TorchLab2RGBImg(x):
   """Convert a Lab Torch Tensor to a RGB PIL Image"""
-  x = x
-  x[0, :, :] *= 100
-  x[1, :, :] *= 128
-  x[2, :, :] *= 128
-  x_permute = x.permute(1, 2, 0)
+  lab_scaling = torch.tensor([100, 128, 128]).float().view(3, 1, 1)
+  x_scaled = x * lab_scaling
+  x_permute = x_scaled.permute(1, 2, 0)
   x_np = x_permute.cpu().numpy()
   x_rgb = color.lab2rgb(x_np)
   im = Image.fromarray(np.uint8(x_rgb*255), "RGB")
   return im
+
+def TorchLab2RGB(x):
+  """Convert a Lab Torch Tensor to a RGB Torch Tensor with range (0, 1)"""
+  lab_scaling = torch.tensor([100, 128, 128]).float().view(3, 1, 1)
+  x_scaled = x * lab_scaling
+  x_permute = x_scaled.permute(1, 2, 0)
+  x_np = x_permute.cpu().numpy()
+  rgb_np = color.lab2rgb(x_np)
+  rgb_torch = torch.from_numpy(rgb_np).permute(2, 0, 1)
+  return rgb_torch
+
+
 
 class OpenDataset:
   def __init__(this, ids, batch_size,SUPER_BATCHING = 30, high_res_size = (200, 200), low_res_size = (100, 100)):
