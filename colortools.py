@@ -31,7 +31,7 @@ def lab2xyz(lab): # funkar!
   
   return out
     
-def xyz2rgb(xyz): # funkar inte
+def xyz2rgb(xyz): # funkar!
   shape = torch.tensor(xyz.shape)[ [0,2,3] ]
   shape = list(shape)
   xyz_ = torch.stack([xyz[:,0,:,:].view(-1), xyz[:,1,:,:].view(-1), xyz[:,2,:,:].view(-1)], dim=1)
