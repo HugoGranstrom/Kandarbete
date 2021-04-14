@@ -10,15 +10,15 @@ rgb_from_xyz = torch.inverse(xyz_from_rgb)
 
 white_ref = torch.tensor((0.95047, 1., 1.08883)).view(1, 3, 1, 1)
 
-def lab2xyz(lab): #
+def lab2xyz(lab): # funkar!
   L, a, b = lab[:,0,:,:],lab[:,1,:,:],lab[:,2,:,:]
   
   y = (L + 16.) / 116.
   x = (a / 500.) + y
   z = y - (b / 200.)
-  print(b)
-  print("z:", torch.sum(torch.isnan(a / 500. + y)))
   
+  if torch.any(z<0):
+    print("Any!", torch.sum(z<0))
   z[z<0]=0
 
   out = torch.stack([x, y, z], dim=1)
@@ -31,12 +31,12 @@ def lab2xyz(lab): #
   
   return out
     
-def xyz2rgb(xyz):
+def xyz2rgb(xyz): # funkar inte
   shape = torch.tensor(xyz.shape)[ [0,2,3] ]
   shape = list(shape)
   xyz_ = torch.stack([xyz[:,0,:,:].view(-1), xyz[:,1,:,:].view(-1), xyz[:,2,:,:].view(-1)], dim=1)
   
-  mul = torch.matmul(xyz_, rgb_from_xyz)
+  mul = torch.matmul(xyz_, rgb_from_xyz.T)
   
   x,y,z = mul[:,0].view(shape), mul[:,1].view(shape), mul[:,2].view(shape)
 
@@ -50,10 +50,8 @@ def xyz2rgb(xyz):
   return arr
 
 def lab2rgb(lab):
-  x = lab.clone()
-  x[:, 0, :, :] *= 100
-  x[:, 1, :, :] *= 128
-  x[:, 2, :, :] *= 128
+  lab_scaling = torch.tensor([100, 128, 128]).float().view(1, 3, 1, 1)
+  x = lab * lab_scaling
   return xyz2rgb(lab2xyz(x))
 
 
