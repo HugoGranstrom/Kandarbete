@@ -10,6 +10,9 @@ rgb_from_xyz = torch.inverse(xyz_from_rgb)
 
 white_ref = torch.tensor((0.95047, 1., 1.08883)).view(1, 3, 1, 1)
 
+lab_scaling = torch.tensor([100, 128*2, 128*2]).float().view(1, 3, 1, 1)
+lab_adding = torch.tensor([0, 0.5, 0.5]).float().view(1, 3, 1, 1)
+
 def lab2xyz(lab, device): # funkar!
   L, a, b = lab[:,0,:,:],lab[:,1,:,:],lab[:,2,:,:]
   
@@ -23,7 +26,7 @@ def lab2xyz(lab, device): # funkar!
   mask = out > 0.2068966
   #out[mask] = torch.pow(out[mask], 3.)
   #out[~mask] = (out[~mask] - 16.0 / 116.) / 7.787
-  out = torch.pow(out * mask, 3.) + (out * (~mask) - (~mask) * 16.0 / 116.) / 7.787
+  out = torch.pow(out * mask, 3.) + (~mask) * (out - 16.0 / 116.) / 7.787
   
   # rescale to the reference white (illuminant)
   out = out * white_ref.to(device)
@@ -45,13 +48,13 @@ def xyz2rgb(xyz, device): # funkar!
   mask = arr > 0.0031308
   #arr[mask] = 1.055 * torch.pow(arr[mask], 1 / 2.4) - 0.055
   #arr[~mask] = arr[~mask] / 12.92
-  arr = 1.055 * torch.pow(arr * mask, 1 / 2.4) - 0.055 + arr * (~mask) / 12.92
+  arr = (1.055 * torch.pow(arr * mask, 1 / 2.4) - mask*0.055) + arr * (~mask) / 12.92
   arr = torch.clip(arr, 0, 1)
   return arr
 
 def lab2rgb(lab, device):
-  lab_scaling = torch.tensor([100, 128, 128]).float().view(1, 3, 1, 1).to(device)
-  x = lab * lab_scaling
+  x = lab - lab_adding.to(device)
+  x = x * lab_scaling.to(device)
   return xyz2rgb(lab2xyz(x, device), device)
 
 
