@@ -37,51 +37,31 @@ from collections import namedtuple
 import torch
 from torchvision import models
 
-class Vgg16(torch.nn.Module):
-    def __init__(self, requires_grad=False):
-        super(Vgg16, self).__init__()
-        vgg_pretrained_features = models.vgg16(pretrained=True).features
-        self.slice1 = torch.nn.Sequential()
-        self.slice2 = torch.nn.Sequential()
-        self.slice3 = torch.nn.Sequential()
-        self.slice4 = torch.nn.Sequential()
-        for x in range(4):
-            self.slice1.add_module(str(x), vgg_pretrained_features[x])
-        for x in range(4, 9):
-            self.slice2.add_module(str(x), vgg_pretrained_features[x])
-        for x in range(9, 16):
-            self.slice3.add_module(str(x), vgg_pretrained_features[x])
-        #for x in range(16, 23):
-        #    self.slice4.add_module(str(x), vgg_pretrained_features[x])
-        if not requires_grad:
-            for param in self.parameters():
-                param.requires_grad = False
+class AdverserialModel(nn.Module):
+  def __init__(self, high_res):
+    super().__init__()
+    this.model = nn.Sequential(
+    nn.Conv2d(3, 16, 3,padding=1), # 3*3*3*16 = 432
+    nn.ReLU(),
+    nn.Conv2d(16, 32, 3,padding=1, stride=2), # 4608
+    nn.ReLU(),
+    nn.Conv2d(32, 64, 3,padding=1, stride=2), # 18 432
+    nn.ReLU(),
+    nn.Conv2d(64, 128, 3,padding=1, stride=2), # 73 728
+    nn.ReLU(),
+    nn.Conv2d(128, 128, 3,padding=1, stride=2), # 147 456
+    nn.ReLU(),
+    nn.Conv2d(128, 128, 3,padding=1, stride=2), # 147 456
+    nn.ReLU(),
+    nn.Linear(128*high_res*high_res/1024, 1024), # 8 388 608
+    nn.ReLU(),
+    nn.Linear(1024, 128),
+    nn.ReLU(),
+    nn.Linear(128, 1))
+    nn.Sigmoid(),
 
-    def forward(self, X):
-        h = self.slice1(X)
-        h_relu1_2 = h
-        h = self.slice2(h)
-        h_relu2_2 = h
-        h = self.slice3(h)
-        h_relu3_3 = h
-        h = self.slice4(h)
-        h_relu4_3 = h
-        vgg_outputs = namedtuple("VggOutputs", ['relu1_2', 'relu2_2', 'relu3_3', 'relu4_3'])
-        out = vgg_outputs(h_relu1_2, h_relu2_2, h_relu3_3, h_relu4_3)
-        return out
-
-def perceptual_loss(y, y_hat, vgg):
-  """Normalizes y and y_hat, runs them through vgg and compares intermediate layers and returns the perceptual loss"""
-  mean = torch.tensor([0.485, 0.456, 0.406])
-  std = torch.tensor([0.229, 0.224, 0.225]) # the biggest value that can be normalized to is 2.64
-  normalize = transforms.Normalize(mean.tolist(), std.tolist())
-  unnormalize = transforms.Normalize((-mean / std).tolist(), (1.0 / std).tolist())
-
-  features_y = vgg(normalize(y))
-  features_y_hat = vgg(normalize(y_hat))
-  loss = 0.5 * F.mse_loss(features_y_hat.relu2_2, features_y.relu2_2)
-  return loss
-
+  def forward(self, x):
+    return model(x)
 
 if __name__ == '__main__':
   torch.multiprocessing.freeze_support()
@@ -102,6 +82,9 @@ if __name__ == '__main__':
 
   net = UNet(depth=5).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=lr_min)
+  
+  disc = AdverserialModel().to(device)
+  optimizer_disc = torch.optim.Adam(net.parameters(), lr=lr_min)
 
   filename = "net_UNet.pt"
 
@@ -114,7 +97,6 @@ if __name__ == '__main__':
   net.train()
   net.to(device)
   validation_size = 100
-  vgg = Vgg16(requires_grad=False).to(device).eval()
 
   dataset = OpenDataset(ids[:-validation_size], batch_size=15, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_dataset = OpenDataset(ids[-validation_size:], batch_size=15, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
