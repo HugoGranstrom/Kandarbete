@@ -67,7 +67,7 @@ class Decoder(nn.Module):
       x = torch.cat([x, encoder_features[i]], dim=1)
       x = self.blocks[i](x)
     x = self.finalUpscale(x)
-    x = torch.sigmoid(self.finalBlock(x))
+    x = torch.relu(self.finalBlock(x))
     return x
 
 class UNet(nn.Module):

@@ -24,6 +24,8 @@ import pandas as pd
 
 import random
 
+from skimage import color, io
+
 def download_one_image(bucket, split, image_id, download_folder):
   try:
     bucket.download_file(f'{split}/{image_id}.jpg',
@@ -41,6 +43,39 @@ class NinetiesRotation:
     def __call__(self, x):
         angle = random.choice(self.angles)
         return transforms.functional.rotate(x, angle)
+
+
+class ToXYZTensor:
+    """Convert a PIL image to Torch Tensor encoded using LAB"""
+
+    def __init__(self):
+      pass
+
+    def __call__(self, x):
+      x = np.asarray(x, dtype=np.float32) / 255
+      Lab = color.rgb2xyz(x) # convert PIL -> numpy array
+      Lab_torch = torch.from_numpy(Lab).float() # convert numpy -> torch
+      Lab_permute = Lab_torch.permute(2, 0, 1) # move channels from last to first dimension
+      return Lab_permute
+
+def TorchXYZ2RGBImg(x, device):
+  """Convert a Lab Torch Tensor to a RGB PIL Image"""
+  x_permute = x_scaled.permute(1, 2, 0)
+  x_np = x_permute.cpu().numpy()
+  x_rgb = color.xyz2rgb(x_np)
+  im = Image.fromarray(np.uint8(x_rgb*255), "RGB")
+  return im
+
+def TorchXYZ2RGB(x, device):
+  """Convert a Lab Torch Tensor to a RGB Torch Tensor with range (0, 1)"""
+  x_permute = x.permute(1, 2, 0)
+  x_np = x_permute.cpu().numpy()
+  rgb_np = color.xyz2rgb(x_np)
+  rgb_torch = torch.from_numpy(rgb_np)
+  rgb_torch = rgb_torch.permute(2, 0, 1)
+  return rgb_torch
+
+
 
 class OpenDataset:
   def __init__(this, ids, batch_size,SUPER_BATCHING = 30, high_res_size = (200, 200), low_res_size = (100, 100)):
@@ -71,7 +106,7 @@ class OpenDataset:
     this.X_transforms = transforms.Compose([
                                             transforms.Resize(low_res_size, transforms.InterpolationMode.BILINEAR)
                                             ])
-    this.toTensor = transforms.Compose([transforms.ToTensor()])
+    this.toTensor = transforms.Compose([ToXYZTensor()])
     try:
       os.mkdir("imgs")
     except OSError:
