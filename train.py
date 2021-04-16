@@ -116,25 +116,26 @@ if __name__ == '__main__':
   validation_size = 100
   vgg = Vgg16(requires_grad=False).to(device).eval()
 
-  dataset = OpenDataset(ids[:-validation_size], batch_size=15, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
+  """dataset = OpenDataset(ids[:-validation_size], batch_size=15, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_dataset = OpenDataset(ids[-validation_size:], batch_size=15, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_data = [i for i in validation_dataset]
-  validation_size = len(validation_data)
-  """traindata = FolderSet("train")
-  validdata = FolderSet("valid")
+  validation_size = len(validation_data)"""
+  traindata = FolderSet("train")
+  validdata = FolderSet("valid",length_multiplier = 1)
 
-  trainloader = DataLoader(traindata, batch_size=10, num_workers = 7)
-  validloader = DataLoader(validdata, batch_size=8)
-  validation_size = len(validdata)/8
-  """
+  dataset = DataLoader(traindata, batch_size=18, num_workers = 7)
+  validation_data = DataLoader(validdata, batch_size=20)
+  validation_size = len(validation_data)
   
-  print_every = 1
-  save_every = 1
+  print_every = 50
+  save_every = 200
+  i = iteration
   for epoch in range(1000):  # loop over the dataset multiple times
 
       running_loss = 0.0
       train_loss = 0.0
-      for i, data in enumerate(dataset, iteration+1):
+      for data in dataset:
+          i += 1
           # get the inputs; data is a list of [inputs, labels]
           inputs, labels = data
           inputs = inputs.to(device)
