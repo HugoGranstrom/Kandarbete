@@ -29,7 +29,7 @@ class NinetiesRotation:
         return transforms.functional.rotate(x, angle)
 
 class FolderSet(Dataset):
-  def __init__(this, root_dir, high_res_size = (256, 256), low_res_size = (128, 128)):
+  def __init__(this, root_dir, high_res_size = (256, 256), low_res_size = (128, 128), length_multiplier = 8):
     this.high_res_size = high_res_size
     this.low_res_size = low_res_size
     this.crop_transform = transforms.Compose([
@@ -44,12 +44,13 @@ class FolderSet(Dataset):
     this.toTensor = transforms.Compose([transforms.ToTensor()])
     
     this.files = glob.glob(f"{root_dir}/*.png")
+    this.length = len(this.files)*length_multiplier
       
   def __len__(this):
-    return len(this.files)
+    return this.length
     
   def __getitem__(this,idx):
-    im = Image.open(this.files[idx])
+    im = Image.open(this.files[random.randrange(0,len(this.files))])
     im = im if im.mode == "RGB" else im.convert("RGB")
     
     transformed_im = this.crop_transform(im)

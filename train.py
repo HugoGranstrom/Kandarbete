@@ -104,34 +104,37 @@ if __name__ == '__main__':
   net.train()
   net.to(device)
   validation_size = 100
-  batch_size = 10
-  dataset = OpenDataset(ids[:-validation_size], batch_size=batch_size, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
+  """dataset = OpenDataset(ids[:-validation_size], batch_size=batch_size, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_dataset = OpenDataset(ids[-validation_size:], batch_size=batch_size, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_data = [i for i in validation_dataset]
   validation_size = len(validation_data)
-  """traindata = FolderSet("train")
+  """
+  traindata = FolderSet("train")
   validdata = FolderSet("valid")
 
-  trainloader = DataLoader(traindata, batch_size=10, num_workers = 7)
-  validloader = DataLoader(validdata, batch_size=8)
-  validation_size = len(validdata)/8
-  """
+  dataset = DataLoader(traindata, batch_size=15, num_workers = 7)
+  validation_data = DataLoader(validdata, batch_size=15)
+  validation_size = len(validation_data)
   
-  print_every = 1
+  print_every = 50
   save_every = 1
+  i = iteration
   for epoch in range(1000):  # loop over the dataset multiple times
 
       running_lossD = 0.0
       running_lossG = 0.0
       train_loss = 0.0
-      for i, data in enumerate(dataset, iteration+1):
+      for data in dataset:
+          i += 1
           # get the inputs; data is a list of [inputs, labels]
           inputs, real = data
           inputs = inputs.to(device)
           real = real.to(device)
           # zero the parameter gradients
           optimizer_disc.zero_grad()
-
+          
+          batch_size = len(inputs)
+          
           real_labels = torch.full((batch_size,), real_label, dtype=torch.float, device=device)
           output = disc(real)
           errD_real = criterion(output.squeeze(), real_labels.squeeze())
@@ -163,7 +166,7 @@ if __name__ == '__main__':
           running_lossD += errorD
           train_loss += errorG + errorD
           # print statistics
-          if i % print_every == print_every-1:
+          if i % print_every == 0:
               print('[%d, %5d] lossG: %.4f' %
                     (epoch, i, running_lossG / print_every))
               print('[%d, %5d] lossD: %.4f' %
