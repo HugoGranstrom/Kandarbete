@@ -31,6 +31,7 @@ from dataset import *
 from hqset import *
 from net import *
 from unet import *
+from test import predict
 
 from collections import namedtuple
 
@@ -93,9 +94,9 @@ if __name__ == '__main__':
   real_label = 1.
   fake_label = 0.
 
-  filename = "net_UNet.pt"
+  filename = "GAN_UNet_v1.pt"
 
-  iterations, train_losses, val_losses = loadNet(filename, net, optimizer, device)
+  iterations, train_losses, val_losses = loadNet(filename, net, optimizer, disc, optimizer_disc, device)
   best_loss = min(val_losses) if len(val_losses) > 0 else 1e6
   print("Best validation loss:", best_loss)
   iteration = iterations[-1] if len(iterations) > 0 else -1
@@ -118,7 +119,7 @@ if __name__ == '__main__':
   """
   
   print_every = 1
-  save_every = 1
+  save_every = 2
   for epoch in range(1000):  # loop over the dataset multiple times
 
       running_lossD = 0.0
@@ -169,11 +170,14 @@ if __name__ == '__main__':
               print('[%d, %5d] lossD: %.4f' %
                     (epoch, i, running_lossD / print_every))
               running_lossD, running_lossG = 0.0, 0.0
-          """if i % save_every == save_every-1:
+          if i % save_every == save_every-1:
             train_losses.append(train_loss / save_every)
             print("Training loss:", train_loss / save_every)
             train_loss = 0.0
             iterations.append(i)
+            saveNet(filename, net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
+            print("Saved model!")
+            """
             with torch.no_grad():
               net.eval()
               percep_loss = 0
@@ -195,10 +199,9 @@ if __name__ == '__main__':
               print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "Perceptual:", percep_loss, "lr:", scheduler.get_last_lr())
               net.train()
               if validation_loss < best_loss:
-                saveNet(filename + "_best", net, optimizer, iterations, train_losses, val_losses)
+                saveNet(filename + "_best", net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
                 print(f"New best loss: {best_loss} -> {validation_loss}")
                 best_loss = validation_loss
-              saveNet(filename, net, optimizer, iterations, train_losses, val_losses)
-              print("Saved model!")"""
+            """
               
                 

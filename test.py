@@ -3,28 +3,6 @@ from dataset import *
 from net import *
 from unet import *
 
-imf = input("Enter file: ")
-if imf == "":
-  imf = "imgs/0a2cc77c7437e2fb.jpg"
-
-
-print('cuda' if torch.cuda.is_available() else 'cpu')
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = 'cpu'
-
-filename = "net_UNet_v2.pt"
-
-net = UNet(depth=4)
-loadNetEval(filename, net, device)
-#loadNetEval("/content/drive/MyDrive/Colab Notebooks/" + filename, net, device)
-net.to(device)
-net.eval()
-#toTensor = transforms.Compose([
-                               #transforms.GaussianBlur(3),
-                               #transforms.ToTensor(),
-                               #transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-                               #])
 def compat_pad(image, network_depth):
   n = 2**network_depth
   if isinstance(image, Image.Image):
@@ -59,19 +37,37 @@ def predict(image, net, device):
     im = transforms.ToPILImage()(y)
     return im
 
-with torch.no_grad():
-  x = Image.open(imf).convert("RGB")
-  #x = Image.open("CAM00017.jpg").convert("RGB")
-  plt.imshow(x)
-  plt.show()
-  #y = net(transforms.ToTensor()(x).unsqueeze(0).to(device))
-  #im = transforms.ToPILImage()(y.squeeze())
-  im = predict(x, net, device)
-  im.save("result.png")
-  plt.imshow(im)
-  plt.show()
+if __name__ == '__main__':
+  imf = input("Enter file: ")
+  if imf == "":
+    imf = "imgs/0a2cc77c7437e2fb.jpg"
 
-y = transforms.Resize((x.size[1]*2, x.size[0]*2), transforms.InterpolationMode.LANCZOS)(x)
-plt.imshow(y)
-plt.show()
-y.save("lanczos.png")
+
+  print('cuda' if torch.cuda.is_available() else 'cpu')
+
+  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+  device = 'cpu'
+
+  filename = "GAN_UNet_v1.pt"
+
+  net = UNet(depth=5)
+  loadNetEval(filename, net, device)
+  #loadNetEval("/content/drive/MyDrive/Colab Notebooks/" + filename, net, device)
+  net.to(device)
+  net.eval()
+  with torch.no_grad():
+    x = Image.open(imf).convert("RGB")
+    #x = Image.open("CAM00017.jpg").convert("RGB")
+    plt.imshow(x)
+    plt.show()
+    #y = net(transforms.ToTensor()(x).unsqueeze(0).to(device))
+    #im = transforms.ToPILImage()(y.squeeze())
+    im = predict(x, net, device)
+    im.save("result.png")
+    plt.imshow(im)
+    plt.show()
+
+  y = transforms.Resize((x.size[1]*2, x.size[0]*2), transforms.InterpolationMode.LANCZOS)(x)
+  plt.imshow(y)
+  plt.show()
+  y.save("lanczos.png")
