@@ -54,14 +54,16 @@ class VGG(nn.Module):
         modules = [m for m in vgg_features]
         
         if conv_index == '22':
-            self.vgg = nn.Sequential(*modules[:8])
+            self.vgg = nn.Sequential(*modules[:9])
         elif conv_index == '54':
-            self.vgg = nn.Sequential(*modules[:35])
+            self.vgg = nn.Sequential(*modules[:36])
 
         vgg_mean = (0.485, 0.456, 0.406)
         vgg_std = (0.229, 0.224, 0.225)
         #self.sub_mean = common.MeanShift(rgb_range, vgg_mean, vgg_std)
         self.vgg.requires_grad = False
+        for param in self.parameters():
+          param.requires_grad = False
 
 
     def calcLoss(self, sr: torch.Tensor, hr: torch.Tensor) -> torch.Tensor:
@@ -241,7 +243,7 @@ if __name__ == '__main__':
           #scheduler.step()
           running_lossG += errorG
           running_lossD += errorD
-          train_loss += errorG + errorD
+          train_loss += loss.item()
           # print statistics
           if i % print_every == 0:
               print('[%d, %5d] lossG: %.4f' %
