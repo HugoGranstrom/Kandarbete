@@ -40,7 +40,9 @@ def predict(image, net, device):
 if __name__ == '__main__':
   imf = input("Enter file: ")
   if imf == "":
+    OpenDataset([],1).download_image("0a2cc77c7437e2fb")
     imf = "imgs/0a2cc77c7437e2fb.jpg"
+    
 
 
   print('cuda' if torch.cuda.is_available() else 'cpu')
@@ -59,13 +61,17 @@ if __name__ == '__main__':
     x = Image.open(imf).convert("RGB")
     #x = Image.open("CAM00017.jpg").convert("RGB")
     plt.imshow(x)
-    plt.show()
+    plt.show(block=False)
+    plt.pause(0.05)
+    plt.figure()
     #y = net(transforms.ToTensor()(x).unsqueeze(0).to(device))
     #im = transforms.ToPILImage()(y.squeeze())
     im = predict(x, net, device)
     im.save("result.png")
     plt.imshow(im)
-    plt.show()
+    plt.show(block=False)
+    plt.pause(0.05)
+    plt.figure()
 
   y = transforms.Resize((x.size[1]*2, x.size[0]*2), transforms.InterpolationMode.LANCZOS)(x)
   plt.imshow(y)
