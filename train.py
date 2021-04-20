@@ -152,21 +152,21 @@ if __name__ == '__main__':
   net.to(device)
   validation_size = 100
   batch_size = 15
-
+  """
   dataset = OpenDataset(ids[:-validation_size], batch_size=batch_size, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_dataset = OpenDataset(ids[-validation_size:], batch_size=batch_size, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_data = [i for i in validation_dataset]
   validation_size = len(validation_data)
   """
   traindata = FolderSet("train")
-  validdata = FolderSet("valid")
+  validdata = FolderSet("valid", length_multiplier=1)
 
   dataset = DataLoader(traindata, batch_size=15, num_workers = 7)
   validation_data = DataLoader(validdata, batch_size=15)
   validation_size = len(validation_data)
-  """
+  
   print_every = 50
-  save_every = 1
+  save_every = 200
   i = iteration
   for epoch in range(1000):  # loop over the dataset multiple times
 
@@ -230,7 +230,7 @@ if __name__ == '__main__':
             iterations.append(i)
             saveNet(filename, net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
             print("Saved model!")
-            """
+            
             with torch.no_grad():
               net.eval()
               percep_loss = 0
@@ -249,12 +249,7 @@ if __name__ == '__main__':
               validation_loss = percep_loss + pixel_loss
               val_losses.append(validation_loss)
               
-              print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "Perceptual:", percep_loss, "lr:", scheduler.get_last_lr())
+              print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "Perceptual:", percep_loss)
               net.train()
-              if validation_loss < best_loss:
-                saveNet(filename + "_best", net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
-                print(f"New best loss: {best_loss} -> {validation_loss}")
-                best_loss = validation_loss
-            """
               
                 
