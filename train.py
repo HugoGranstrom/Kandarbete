@@ -38,49 +38,73 @@ from collections import namedtuple
 import torch
 from torchvision import models
 
-class Vgg16(torch.nn.Module):
-    def __init__(self, requires_grad=False):
-        super(Vgg16, self).__init__()
-        vgg_pretrained_features = models.vgg16(pretrained=True).features
-        self.slice1 = torch.nn.Sequential()
-        self.slice2 = torch.nn.Sequential()
-        self.slice3 = torch.nn.Sequential()
-        self.slice4 = torch.nn.Sequential()
-        for x in range(4):
-            self.slice1.add_module(str(x), vgg_pretrained_features[x])
-        for x in range(4, 9):
-            self.slice2.add_module(str(x), vgg_pretrained_features[x])
-        for x in range(9, 16):
-            self.slice3.add_module(str(x), vgg_pretrained_features[x])
-        #for x in range(16, 23):
-        #    self.slice4.add_module(str(x), vgg_pretrained_features[x])
-        if not requires_grad:
-            for param in self.parameters():
-                param.requires_grad = False
+class VGG(nn.Module):
+    """VGG/Perceptual Loss
+    
+    Parameters
+    ----------
+    conv_index : str
+        Convolutional layer in VGG model to use as perceptual output
 
-    def forward(self, X):
-        h = self.slice1(X)
-        h_relu1_2 = h
-        h = self.slice2(h)
-        h_relu2_2 = h
-        h = self.slice3(h)
-        h_relu3_3 = h
-        h = self.slice4(h)
-        h_relu4_3 = h
-        vgg_outputs = namedtuple("VggOutputs", ['relu1_2', 'relu2_2', 'relu3_3', 'relu4_3'])
-        out = vgg_outputs(h_relu1_2, h_relu2_2, h_relu3_3, h_relu4_3)
-        return out
+    """
+    def __init__(self, conv_index: str = '22'):
 
-def perceptual_loss(y, y_hat, vgg):
+        super(VGG, self).__init__()
+        vgg_features = models.vgg19(pretrained=True).features
+        modules = [m for m in vgg_features]
+        
+        if conv_index == '22':
+            self.vgg = nn.Sequential(*modules[:8])
+        elif conv_index == '54':
+            self.vgg = nn.Sequential(*modules[:35])
+
+        vgg_mean = (0.485, 0.456, 0.406)
+        vgg_std = (0.229, 0.224, 0.225)
+        #self.sub_mean = common.MeanShift(rgb_range, vgg_mean, vgg_std)
+        self.vgg.requires_grad = False
+
+
+    def calcLoss(self, sr: torch.Tensor, hr: torch.Tensor) -> torch.Tensor:
+        """Compute VGG/Perceptual loss between Super-Resolved and High-Resolution
+
+        Parameters
+        ----------
+        sr : torch.Tensor
+            Super-Resolved model output tensor
+        hr : torch.Tensor
+            High-Resolution image tensor
+
+        Returns
+        -------
+        loss : torch.Tensor
+            Perceptual VGG loss between sr and hr
+
+        """
+        def _forward(x):
+            #x = self.sub_mean(x)
+            x = self.vgg(x)
+            return x
+            
+        vgg_sr = _forward(sr)
+
+        with torch.no_grad():
+            vgg_hr = _forward(hr.detach())
+
+        loss = F.mse_loss(vgg_sr, vgg_hr)
+
+        return loss
+
+def perceptual_loss(real, fake, vgg):
   """Normalizes y and y_hat, runs them through vgg and compares intermediate layers and returns the perceptual loss"""
   mean = torch.tensor([0.485, 0.456, 0.406])
   std = torch.tensor([0.229, 0.224, 0.225]) # the biggest value that can be normalized to is 2.64
   normalize = transforms.Normalize(mean.tolist(), std.tolist())
   unnormalize = transforms.Normalize((-mean / std).tolist(), (1.0 / std).tolist())
 
-  features_y = vgg(normalize(y))
-  features_y_hat = vgg(normalize(y_hat))
-  loss = 0.5 * F.mse_loss(features_y_hat.relu2_2, features_y.relu2_2)
+  #features_y = vgg(normalize(y))
+  #features_y_hat = vgg(normalize(y_hat))
+  #loss = 0.5 * F.mse_loss(features_y_hat.relu2_2, features_y.relu2_2)
+  loss = 0.5 * vgg.calcLoss(normalize(fake), normalize(real))
   return loss
 
 class AdverserialModel(nn.Module):
@@ -135,7 +159,7 @@ if __name__ == '__main__':
   optimizer_disc = torch.optim.Adam(disc.parameters(), lr=0.0002)
 
   criterion = nn.BCELoss()
-  vgg = Vgg16(requires_grad=False).to(device).eval()
+  vgg = VGG(conv_index="54").to(device).eval()
 
   real_label = 1.
   fake_label = 0.
@@ -152,7 +176,7 @@ if __name__ == '__main__':
   net.to(device)
   validation_size = 100
   batch_size = 15
-  """
+
   dataset = OpenDataset(ids[:-validation_size], batch_size=batch_size, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_dataset = OpenDataset(ids[-validation_size:], batch_size=batch_size, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_data = [i for i in validation_dataset]
@@ -164,9 +188,10 @@ if __name__ == '__main__':
   dataset = DataLoader(traindata, batch_size=15, num_workers = 7)
   validation_data = DataLoader(validdata, batch_size=15)
   validation_size = len(validation_data)
+  """
   
-  print_every = 50
-  save_every = 200
+  print_every = 100
+  save_every = 500
   i = iteration
   for epoch in range(1000):  # loop over the dataset multiple times
 
@@ -201,9 +226,10 @@ if __name__ == '__main__':
           optimizer.zero_grad()
           output = disc(fakes).view(-1)
           errG = criterion(output, real_labels)
-          errG += perceptual_loss(fakes, real, vgg)
-          errG += F.mse_loss(real, fakes)
-          errG.backward()
+          loss = 1e-3 * errG
+          loss += perceptual_loss(real, fakes, vgg)
+          loss += F.mse_loss(real, fakes)
+          loss.backward()
           optimizer.step()
 
           errorD = errD.mean().item()
@@ -239,7 +265,7 @@ if __name__ == '__main__':
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 outputs_val = net(inputs)
-                per_loss = perceptual_loss(outputs_val, labels, vgg)
+                per_loss = perceptual_loss(labels, outputs_val, vgg)
                 pix_loss = F.l1_loss(outputs_val, labels)
                 percep_loss += per_loss.item()
                 pixel_loss += pix_loss.item()
