@@ -21,12 +21,25 @@ class CnnBlock(nn.Module):
       x = self.activation(x)
     return x
 
+class StackedBlocks(nn.Module):
+  def __init__(self, in_channels, out_channels, n_blocks=3):
+    super().__init__()
+    if n_blocks == 1:
+      self.blocks = CnnBlock(in_channels, out_channels)
+      self.blocks = nn.Sequential(CnnBlock(in_channels, out_channels), CnnBlock(out_channels, out_channels))
+    else:
+      self.blocks = nn.Sequential(CnnBlock(in_channels, out_channels), *[CnnBlock(out_channels, out_channels) for i in range(n_blocks-1)])
+    self.skip = nn.Conv2d(in_channels, out_channels, 1)
+
+  def forward(self, x):
+    return self.blocks(x) + self.skip(x)
+
 class Encoder(nn.Module):
   def __init__(self, nchannels):
     super().__init__()
     self.nchannels = nchannels
     self.pool = nn.MaxPool2d(2)
-    self.blocks = nn.ModuleList([CnnBlock(nchannels[i], nchannels[i+1]) for i in range(len(nchannels)-1)])
+    self.blocks = nn.ModuleList([StackedBlocks(nchannels[i], nchannels[i+1]) for i in range(len(nchannels)-1)])
 
   def forward(self, x):
     features = []
