@@ -148,6 +148,7 @@ if __name__ == '__main__':
 
           loss = perceptual_loss(outputs, labels, vgg)
           loss += F.l1_loss(outputs, labels)
+          
           loss.backward()
           optimizer.step()
           scheduler.step()
