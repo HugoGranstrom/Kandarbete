@@ -22,24 +22,25 @@ class CnnBlock(nn.Module):
     return x
 
 class StackedBlocks(nn.Module):
-  def __init__(self, in_channels, out_channels, n_blocks=3):
+  def __init__(self, in_channels, out_channels, n_blocks):
     super().__init__()
     if n_blocks == 1:
       self.blocks = CnnBlock(in_channels, out_channels)
-      self.blocks = nn.Sequential(CnnBlock(in_channels, out_channels), CnnBlock(out_channels, out_channels))
-    else:
+    elif n_blocks > 1:
       self.blocks = nn.Sequential(CnnBlock(in_channels, out_channels), *[CnnBlock(out_channels, out_channels) for i in range(n_blocks-1)])
+    else:
+      raise ValueError("n_blocks must be larger than 0, it was:", n_blocks)
     self.skip = nn.Conv2d(in_channels, out_channels, 1)
 
   def forward(self, x):
     return self.blocks(x) + self.skip(x)
 
 class Encoder(nn.Module):
-  def __init__(self, nchannels):
+  def __init__(self, nchannels, n_blocks):
     super().__init__()
     self.nchannels = nchannels
     self.pool = nn.MaxPool2d(2)
-    self.blocks = nn.ModuleList([StackedBlocks(nchannels[i], nchannels[i+1]) for i in range(len(nchannels)-1)])
+    self.blocks = nn.ModuleList([StackedBlocks(nchannels[i], nchannels[i+1], n_blocks) for i in range(len(nchannels)-1)])
 
   def forward(self, x):
     features = []
@@ -87,11 +88,11 @@ class UNet(nn.Module):
   # Important! The side lengths of the input image must be divisible depth times by 2. Add padding to nearest multiple when evaluating
   # Safe size: current_size + current_size % 2**(len(nchannels)-1) 
   # Pad to safe size, then crop to correct upscaled size afterwards
-  def __init__(self, depth=4, init_channels=64):
+  def __init__(self, depth=4, init_channels=64, n_blocks=3):
     super().__init__()
     #nchannels=[64,128,256,512]
     self.nchannels = [init_channels * 2**i for i in range(depth)]
-    self.encoder = Encoder([3] + self.nchannels)
+    self.encoder = Encoder([3] + self.nchannels, n_blocks)
     self.decoder = Decoder(self.nchannels[::-1]) # reverse
 
   def forward(self, x):
