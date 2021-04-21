@@ -44,11 +44,14 @@ if __name__ == '__main__':
     imf = "imgs/0a2cc77c7437e2fb.jpg"
     
 
+  if torch.cuda.is_available():
+    device_name = "none"
+    while device_name != 'cuda' and device_name != 'cpu':
+      device_name = input("Enter device ('cuda', 'cpu'):")
+      if device_name == "":
+        device_name = 'cuda'
 
-  print('cuda' if torch.cuda.is_available() else 'cpu')
-
-  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-  device = 'cpu'
+  device = torch.device(device_name)
 
   filename = "GAN_UNet_v1.pt"
 
@@ -57,23 +60,35 @@ if __name__ == '__main__':
   #loadNetEval("/content/drive/MyDrive/Colab Notebooks/" + filename, net, device)
   net.to(device)
   net.eval()
-  with torch.no_grad():
-    x = Image.open(imf).convert("RGB")
-    #x = Image.open("CAM00017.jpg").convert("RGB")
-    plt.imshow(x)
-    plt.show(block=False)
-    plt.pause(0.05)
-    plt.figure()
-    #y = net(transforms.ToTensor()(x).unsqueeze(0).to(device))
-    #im = transforms.ToPILImage()(y.squeeze())
-    im = predict(x, net, device)
-    im.save("result.png")
-    plt.imshow(im)
-    plt.show(block=False)
-    plt.pause(0.05)
-    plt.figure()
+  
+  x = Image.open(imf).convert("RGB")
+  #x = Image.open("CAM00017.jpg").convert("RGB")
+  plt.imshow(x)
+  plt.show(block=False)
+  plt.pause(0.05)
+  
+  
+  factor_s = input("Enter dimension upscale factor: 2^")
+  if factor_s == "":
+    factor = 1
+    print("=2")
+  else:
+    factor = int(factor_s)
+    print("=",2**factor)
+  #y = net(transforms.ToTensor()(x).unsqueeze(0).to(device))
+  #im = transforms.ToPILImage()(y.squeeze())
+  im = predict(x, net, device)
+  for i in range(factor-2):
+    im = predict(im,net,device)
+    
+  im.save("result.png")
+  plt.figure()
+  plt.imshow(im)
+  plt.show(block=False)
+  plt.pause(0.05)
+  plt.figure()
 
-  y = transforms.Resize((x.size[1]*2, x.size[0]*2), transforms.InterpolationMode.LANCZOS)(x)
+  y = transforms.Resize((x.size[1]*factor, x.size[0]*factor), transforms.InterpolationMode.LANCZOS)(x)
   plt.imshow(y)
   plt.show()
   y.save("lanczos.png")
