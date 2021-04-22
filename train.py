@@ -107,7 +107,9 @@ if __name__ == '__main__':
   lr_min = 0.0001
   lr_max = 0.0005
 
-  net = UNet(depth=5).to(device)
+  scale_power = 1
+
+  net = UNet(depth=5, scale_power=scale_power).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=lr_min)
 
   filename = "net_UNet.pt"
@@ -123,19 +125,26 @@ if __name__ == '__main__':
   validation_size = 100
   vgg = Vgg16(requires_grad=False).to(device).eval()
 
-  """dataset = OpenDataset(ids[:-validation_size], batch_size=15, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
-  validation_dataset = OpenDataset(ids[-validation_size:], batch_size=15, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
+  high_res_size = (256, 256)
+  low_res_size = (high_res_size[0] // 2**scale_power, high_res_size[1] // 2**scale_power)
+  print("Highres:", high_res_size, "Lowres:", low_res_size)
+
+  batch_size = 4
+  dataset = OpenDataset(ids[:-validation_size], batch_size=batch_size, SUPER_BATCHING=40, high_res_size=high_res_size, low_res_size=low_res_size)
+  validation_dataset = OpenDataset(ids[-validation_size:], batch_size=batch_size, SUPER_BATCHING=1, high_res_size=high_res_size, low_res_size=low_res_size)
   validation_data = [i for i in validation_dataset]
-  validation_size = len(validation_data)"""
+  validation_size = len(validation_data)
+  """
   traindata = FolderSet("train")
   validdata = FolderSet("valid",length_multiplier = 1)
 
   dataset = DataLoader(traindata, batch_size=20, num_workers = 7)
   validation_data = DataLoader(validdata, batch_size=25)
   validation_size = len(validation_data)
+  """
   
-  print_every = 50
-  save_every = 200
+  print_every = 1
+  save_every = 5
   i = iteration
   for epoch in range(1000):  # loop over the dataset multiple times
 
@@ -155,8 +164,8 @@ if __name__ == '__main__':
           # forward + backward + optimize
           outputs = net(inputs)
           
-          sobel_loss = 0.1*F.mse_loss(sobel_filter(outputs,device), sobel_filter(labels,device))
-          pixel_loss = F.l1_loss(outputs, labels)
+          sobel_loss = 0.1*F.mse_loss(sobel_filter(outputs,device), sobel_filter(labels.detach(),device))
+          pixel_loss = F.mse_loss(outputs, labels)
           
           sobel_running_loss += sobel_loss.item()
           pix_running_loss += pixel_loss.item()
@@ -172,13 +181,13 @@ if __name__ == '__main__':
           running_loss += loss.item()
           train_loss += loss.item()
           # print statistics
-          if i % print_every == 0:
+          if i % print_every == print_every-1:
               print('[%d, %d] loss: %.4f (Sobel: %.4f, Pixel: %.4f)' %
                     (epoch, i, running_loss / print_every, sobel_running_loss / print_every, pix_running_loss / print_every))
               running_loss = 0.0
               sobel_running_loss = 0.0
               pix_running_loss = 0.0
-          if i % save_every == 0:
+          if i % save_every == save_every-1:
             train_losses.append(train_loss / save_every)
             print("Training loss:", train_loss / save_every)
             train_loss = 0.0
