@@ -130,8 +130,8 @@ if __name__ == '__main__':
   traindata = FolderSet("train")
   validdata = FolderSet("valid",length_multiplier = 1)
 
-  dataset = DataLoader(traindata, batch_size=20, num_workers = 7)
-  validation_data = DataLoader(validdata, batch_size=25)
+  dataset = DataLoader(traindata, batch_size=25, num_workers = 7)
+  validation_data = DataLoader(validdata, batch_size=30)
   validation_size = len(validation_data)
   
   print_every = 50
