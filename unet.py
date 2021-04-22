@@ -88,7 +88,7 @@ class UNet(nn.Module):
   # Important! The side lengths of the input image must be divisible depth times by 2. Add padding to nearest multiple when evaluating
   # Safe size: current_size + current_size % 2**(len(nchannels)-1) 
   # Pad to safe size, then crop to correct upscaled size afterwards
-  def __init__(self, depth=4, init_channels=64, n_blocks=3):
+  def __init__(self, depth=4, init_channels=64, n_blocks=1):
     super().__init__()
     #nchannels=[64,128,256,512]
     self.nchannels = [init_channels * 2**i for i in range(depth)]

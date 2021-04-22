@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
   device = torch.device(device_name)
 
-  filename = "GAN_UNet_v1.pt"
+  filename = "net_UNet.pt"
 
   net = UNet(depth=5)
   loadNetEval(filename, net, device)
@@ -88,7 +88,7 @@ if __name__ == '__main__':
   plt.pause(0.05)
   plt.figure()
 
-  y = transforms.Resize((x.size[1]*factor, x.size[0]*factor), transforms.InterpolationMode.NEAREST)(x)
+  y = transforms.Resize((x.size[1]*(2**factor), x.size[0]*(2**factor)), transforms.InterpolationMode.LANCZOS)(x)
   plt.imshow(y)
   plt.show()
   y.save("lanczos.png")

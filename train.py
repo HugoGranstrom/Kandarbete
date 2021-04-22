@@ -82,6 +82,13 @@ def perceptual_loss(y, y_hat, vgg):
   loss = 0.5 * F.mse_loss(features_y_hat.relu2_2, features_y.relu2_2)
   return loss
 
+def sobel_filter(y, device):
+  kernel_x = torch.tensor([[1, 0, -1],[2,0,-2],[1,0,-1]]).view(1,1,3,3).expand(3,-1,-1,-1).float().to(device)
+  kernel_y = torch.tensor([[1, 2, 1],[0,0,0],[-1,-2,-1]]).view(1,1,3,3).expand(3,-1,-1,-1).float().to(device)
+  Gx = F.conv2d(y, kernel_x, groups=y.shape[1])
+  Gy = F.conv2d(y, kernel_y, groups=y.shape[1])
+  return (Gx**2 + Gy**2)
+
 
 if __name__ == '__main__':
   torch.multiprocessing.freeze_support()
@@ -123,8 +130,8 @@ if __name__ == '__main__':
   traindata = FolderSet("train")
   validdata = FolderSet("valid",length_multiplier = 1)
 
-  dataset = DataLoader(traindata, batch_size=18, num_workers = 7)
-  validation_data = DataLoader(validdata, batch_size=20)
+  dataset = DataLoader(traindata, batch_size=20, num_workers = 7)
+  validation_data = DataLoader(validdata, batch_size=25)
   validation_size = len(validation_data)
   
   print_every = 50
@@ -132,6 +139,8 @@ if __name__ == '__main__':
   i = iteration
   for epoch in range(1000):  # loop over the dataset multiple times
 
+      sobel_running_loss = 0.0
+      pix_running_loss = 0.0
       running_loss = 0.0
       train_loss = 0.0
       for data in dataset:
@@ -145,21 +154,30 @@ if __name__ == '__main__':
 
           # forward + backward + optimize
           outputs = net(inputs)
-
-          loss = perceptual_loss(outputs, labels, vgg)
-          loss += F.l1_loss(outputs, labels)
+          
+          sobel_loss = 0.1*F.mse_loss(sobel_filter(outputs,device), sobel_filter(labels,device))
+          pixel_loss = F.l1_loss(outputs, labels)
+          
+          loss = sobel_loss
+          loss += pixel_loss
+          
           
           loss.backward()
           optimizer.step()
           scheduler.step()
+          
+          sobel_running_loss = sobel_loss.item()
+          pix_running_loss = pixel_loss.item()
           running_loss += loss.item()
           train_loss += loss.item()
           # print statistics
-          if i % print_every == print_every-1:
-              print('[%d, %5d] loss: %.4f' %
-                    (epoch, i, running_loss / print_every))
+          if i % print_every == 0:
+              print('[%d, %5d] loss: %.4f (Sobel: %.4f, Pixel: %.4f)' %
+                    (epoch, i, running_loss / print_every, sobel_running_loss / print_every, pix_running_loss / print_every))
               running_loss = 0.0
-          if i % save_every == save_every-1:
+              sobel_running_loss = 0.0
+              pix_running_loss = 0.0
+          if i % save_every == 0:
             train_losses.append(train_loss / save_every)
             print("Training loss:", train_loss / save_every)
             train_loss = 0.0
