@@ -63,7 +63,7 @@ if __name__ == '__main__':
     factor = int(factor_s)
     print("=",2**factor)
   
-  net = UNet(depth=5)
+  net = UNet(depth=5, scale_power=int(factor_s), n_blocks=1)
   loadNetEval(filename, net, device)
   #loadNetEval("/content/drive/MyDrive/Colab Notebooks/" + filename, net, device)
   net.to(device)
@@ -78,8 +78,6 @@ if __name__ == '__main__':
   #y = net(transforms.ToTensor()(x).unsqueeze(0).to(device))
   #im = transforms.ToPILImage()(y.squeeze())
   im = predict(x, net, device)
-  for i in range(factor-2):
-    im = predict(im,net,device)
     
   im.save("result.png")
   plt.figure()
