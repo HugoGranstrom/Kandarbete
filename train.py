@@ -87,7 +87,7 @@ def sobel_filter(y, device):
   kernel_y = torch.tensor([[1, 2, 1],[0,0,0],[-1,-2,-1]]).view(1,1,3,3).expand(3,-1,-1,-1).float().to(device)
   Gx = F.conv2d(y, kernel_x, groups=y.shape[1])
   Gy = F.conv2d(y, kernel_y, groups=y.shape[1])
-  return (Gx**2 + Gy**2)
+  return (Gx**2 + Gy**2 + 1e-8).sqrt()
 
 
 if __name__ == '__main__':
@@ -158,6 +158,9 @@ if __name__ == '__main__':
           sobel_loss = 0.1*F.mse_loss(sobel_filter(outputs,device), sobel_filter(labels,device))
           pixel_loss = F.l1_loss(outputs, labels)
           
+          sobel_running_loss += sobel_loss.item()
+          pix_running_loss += pixel_loss.item()
+          
           loss = sobel_loss
           loss += pixel_loss
           
@@ -166,13 +169,11 @@ if __name__ == '__main__':
           optimizer.step()
           scheduler.step()
           
-          sobel_running_loss = sobel_loss.item()
-          pix_running_loss = pixel_loss.item()
           running_loss += loss.item()
           train_loss += loss.item()
           # print statistics
           if i % print_every == 0:
-              print('[%d, %5d] loss: %.4f (Sobel: %.4f, Pixel: %.4f)' %
+              print('[%d, %d] loss: %.4f (Sobel: %.4f, Pixel: %.4f)' %
                     (epoch, i, running_loss / print_every, sobel_running_loss / print_every, pix_running_loss / print_every))
               running_loss = 0.0
               sobel_running_loss = 0.0

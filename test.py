@@ -55,6 +55,14 @@ if __name__ == '__main__':
 
   filename = "net_UNet.pt"
 
+  factor_s = input("Enter dimension upscale factor: 2^")
+  if factor_s == "":
+    factor = 1
+    print("=2")
+  else:
+    factor = int(factor_s)
+    print("=",2**factor)
+  
   net = UNet(depth=5)
   loadNetEval(filename, net, device)
   #loadNetEval("/content/drive/MyDrive/Colab Notebooks/" + filename, net, device)
@@ -67,14 +75,6 @@ if __name__ == '__main__':
   plt.show(block=False)
   plt.pause(0.05)
   
-  
-  factor_s = input("Enter dimension upscale factor: 2^")
-  if factor_s == "":
-    factor = 1
-    print("=2")
-  else:
-    factor = int(factor_s)
-    print("=",2**factor)
   #y = net(transforms.ToTensor()(x).unsqueeze(0).to(device))
   #im = transforms.ToPILImage()(y.squeeze())
   im = predict(x, net, device)
