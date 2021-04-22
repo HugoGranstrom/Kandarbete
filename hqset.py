@@ -27,6 +27,18 @@ class NinetiesRotation:
     def __call__(self, x):
         angle = random.choice(self.angles)
         return transforms.functional.rotate(x, angle)
+        
+class RandomDownsampling:
+    """Rotate by one of the given angles."""
+
+    def __init__(self, low_res_size):
+        self.low_res_size = low_res_size
+        self.methods = [transforms.InterpolationMode.LANCZOS, transforms.InterpolationMode.BICUBIC, transforms.InterpolationMode.BILINEAR]
+
+    def __call__(self, x):
+        mode = random.choice(self.methods)
+        return transforms.functional.resize(x, self.low_res_size, mode)
+
 
 class FolderSet(Dataset):
   def __init__(this, root_dir, high_res_size = (256, 256), low_res_size = (128, 128), length_multiplier = 8):
@@ -39,7 +51,7 @@ class FolderSet(Dataset):
                                               ])
     # Transforms a high-res image to a downscaled low-res image
     this.X_transforms = transforms.Compose([
-                                            transforms.Resize(low_res_size, transforms.InterpolationMode.BILINEAR)
+                                            RandomDownsampling()
                                             ])
     this.toTensor = transforms.Compose([transforms.ToTensor()])
     
