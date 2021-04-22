@@ -108,8 +108,9 @@ if __name__ == '__main__':
   lr_max = 0.0005
 
   scale_power = 1
+  n_blocks = 1
 
-  net = UNet(depth=5, scale_power=scale_power).to(device)
+  net = UNet(depth=5, scale_power=scale_power, n_blocks=n_blocks).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=lr_min)
 
   filename = "net_UNet.pt"
@@ -143,8 +144,8 @@ if __name__ == '__main__':
   validation_size = len(validation_data)
   """
   
-  print_every = 1
-  save_every = 5
+  print_every = 100
+  save_every = 500
   i = iteration
   for epoch in range(1000):  # loop over the dataset multiple times
 
