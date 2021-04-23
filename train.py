@@ -88,6 +88,25 @@ def sobel_filter(y, device):
   Gx = F.conv2d(y, kernel_x, groups=y.shape[1])
   Gy = F.conv2d(y, kernel_y, groups=y.shape[1])
   return (Gx**2 + Gy**2 + 1e-8).sqrt()
+"""
+  v = y.max(dim=1, keepdim=True)[0]
+  gauss = (1/16*torch.tensor([[1, 2, 1], [2, 4, 2], [1, 2, 1]])).view(1,1,3,3).float().to(device)
+  v = F.conv2d(v, gauss, groups=v.shape[1])
+  kernel_x = torch.tensor([[1, 0, -1],[2,0,-2],[1,0,-1]]).view(1,1,3,3).float().to(device)
+  kernel_y = torch.tensor([[1, 2, 1],[0,0,0],[-1,-2,-1]]).view(1,1,3,3).float().to(device)
+  Gx = F.conv2d(v, kernel_x, groups=v.shape[1])
+  Gy = F.conv2d(v, kernel_y, groups=v.shape[1])
+  return (Gx**2 + Gy**2 + 1e-8).sqrt()
+"""
+
+def laplace_filter(y, device):
+  v = y.mean(dim=1, keepdim=True)
+  laplace = torch.tensor([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]], dtype=torch.float).view(1, 1, 3, 3).to(device)
+  gauss = (1/16*torch.tensor([[1, 2, 1], [2, 4, 2], [1, 2, 1]])).view(1,1,3,3).float().to(device)
+  v = F.conv2d(v, gauss)
+  v = F.conv2d(v, laplace)
+  return v
+  
 
 
 if __name__ == '__main__':
@@ -107,10 +126,11 @@ if __name__ == '__main__':
   lr_min = 0.0001
   lr_max = 0.0005
 
-  scale_power = 1
+  scale_power = 3
   n_blocks = 1
+  depth = 5
 
-  net = UNet(depth=5, scale_power=scale_power, n_blocks=n_blocks).to(device)
+  net = UNet(depth=depth-scale_power, scale_power=scale_power, init_channels=64*2**scale_power,n_blocks=n_blocks).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=lr_min)
 
   filename = "net_UNet.pt"
@@ -119,7 +139,7 @@ if __name__ == '__main__':
   best_loss = min(val_losses) if len(val_losses) > 0 else 1e6
   print("Best validation loss:", best_loss)
   iteration = iterations[-1] if len(iterations) > 0 else -1
-  scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=lr_min, max_lr=lr_max, step_size_up=2000, last_epoch=iteration, mode="triangular", cycle_momentum=False)
+  scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=lr_min, max_lr=lr_max, step_size_up=1000, last_epoch=iteration, mode="triangular2", cycle_momentum=False)
 
   net.train()
   net.to(device)
@@ -165,7 +185,7 @@ if __name__ == '__main__':
           # forward + backward + optimize
           outputs = net(inputs)
           
-          sobel_loss = 0.1*F.mse_loss(sobel_filter(outputs,device), sobel_filter(labels.detach(),device))
+          sobel_loss = 0.1*F.mse_loss(laplace_filter(outputs,device), laplace_filter(labels.detach(),device))
           pixel_loss = F.mse_loss(outputs, labels)
           
           sobel_running_loss += sobel_loss.item()

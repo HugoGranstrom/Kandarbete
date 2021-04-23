@@ -50,6 +50,8 @@ if __name__ == '__main__':
       device_name = input("Enter device ('cuda', 'cpu'):")
       if device_name == "":
         device_name = 'cuda'
+  else:
+    device_name = "cpu"
 
   device = torch.device(device_name)
 
@@ -63,7 +65,7 @@ if __name__ == '__main__':
     factor = int(factor_s)
     print("=",2**factor)
   
-  net = UNet(depth=5, scale_power=int(factor_s), n_blocks=1)
+  net = UNet(depth=5-int(factor_s), scale_power=int(factor_s), n_blocks=1, init_channels=64*2**int(factor_s))
   loadNetEval(filename, net, device)
   #loadNetEval("/content/drive/MyDrive/Colab Notebooks/" + filename, net, device)
   net.to(device)
