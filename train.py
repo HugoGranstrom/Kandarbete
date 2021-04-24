@@ -83,13 +83,7 @@ def perceptual_loss(y, y_hat, vgg):
   return loss
 
 def sobel_filter(y, device):
-  kernel_x = torch.tensor([[1, 0, -1],[2,0,-2],[1,0,-1]]).view(1,1,3,3).expand(3,-1,-1,-1).float().to(device)
-  kernel_y = torch.tensor([[1, 2, 1],[0,0,0],[-1,-2,-1]]).view(1,1,3,3).expand(3,-1,-1,-1).float().to(device)
-  Gx = F.conv2d(y, kernel_x, groups=y.shape[1])
-  Gy = F.conv2d(y, kernel_y, groups=y.shape[1])
-  return (Gx**2 + Gy**2 + 1e-8).sqrt()
-"""
-  v = y.max(dim=1, keepdim=True)[0]
+  v = y.mean(dim=1, keepdim=True)
   gauss = (1/16*torch.tensor([[1, 2, 1], [2, 4, 2], [1, 2, 1]])).view(1,1,3,3).float().to(device)
   v = F.conv2d(v, gauss, groups=v.shape[1])
   kernel_x = torch.tensor([[1, 0, -1],[2,0,-2],[1,0,-1]]).view(1,1,3,3).float().to(device)
@@ -97,7 +91,6 @@ def sobel_filter(y, device):
   Gx = F.conv2d(v, kernel_x, groups=v.shape[1])
   Gy = F.conv2d(v, kernel_y, groups=v.shape[1])
   return (Gx**2 + Gy**2 + 1e-8).sqrt()
-"""
 
 def laplace_filter(y, device):
   v = y.mean(dim=1, keepdim=True)
@@ -129,11 +122,12 @@ if __name__ == '__main__':
   scale_power = 3
   n_blocks = 1
   depth = 5
+  init_channels = 64
 
-  net = UNet(depth=depth-scale_power, scale_power=scale_power, init_channels=64*2**scale_power,n_blocks=n_blocks).to(device)
+  net = UNet(depth=depth, scale_power=scale_power, init_channels=init_channels, n_blocks=n_blocks).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=lr_min)
 
-  filename = "net_UNet.pt"
+  filename = "net_UNet_nblocks1.pt"
 
   iterations, train_losses, val_losses = loadNet(filename, net, optimizer, device)
   best_loss = min(val_losses) if len(val_losses) > 0 else 1e6
@@ -185,8 +179,8 @@ if __name__ == '__main__':
           # forward + backward + optimize
           outputs = net(inputs)
           
-          sobel_loss = 0.1*F.mse_loss(laplace_filter(outputs,device), laplace_filter(labels.detach(),device))
-          pixel_loss = F.mse_loss(outputs, labels)
+          sobel_loss = 0.1*F.smooth_l1_loss(sobel_filter(outputs,device), sobel_filter(labels.detach(),device))
+          pixel_loss = F.smooth_l1_loss(outputs, labels)
           
           sobel_running_loss += sobel_loss.item()
           pix_running_loss += pixel_loss.item()
@@ -222,7 +216,7 @@ if __name__ == '__main__':
                 labels = labels.to(device)
                 outputs_val = net(inputs)
                 per_loss = perceptual_loss(outputs_val, labels, vgg)
-                pix_loss = F.l1_loss(outputs_val, labels)
+                pix_loss = F.smooth_l1_loss(outputs_val, labels)
                 percep_loss += per_loss.item()
                 pixel_loss += pix_loss.item()
 

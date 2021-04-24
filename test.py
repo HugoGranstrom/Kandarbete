@@ -29,11 +29,11 @@ def compat_pad(image, network_depth):
   return padded_im, padding, width, height
 
 
-def predict(image, net, device):
+def predict(image, net, device, scale_power, depth):
   with torch.no_grad():
-    im, padding, original_width, original_height = compat_pad(image, 4)
+    im, padding, original_width, original_height = compat_pad(image, depth)
     y = net(transforms.ToTensor()(im).unsqueeze(0).to(device)).squeeze()
-    y = transforms.functional.crop(y, 2*padding[1], 2*padding[0], 2*original_height, 2*original_width)
+    y = transforms.functional.crop(y, 2**scale_power*padding[1], 2**scale_power*padding[0], 2**scale_power*original_height, 2**scale_power*original_width)
     im = transforms.ToPILImage()(y)
     return im
 
@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
   device = torch.device(device_name)
 
-  filename = "net_UNet.pt"
+  filename = "net_UNet_nblocks1.pt"
 
   factor_s = input("Enter dimension upscale factor: 2^")
   if factor_s == "":
@@ -65,7 +65,13 @@ if __name__ == '__main__':
     factor = int(factor_s)
     print("=",2**factor)
   
-  net = UNet(depth=5-int(factor_s), scale_power=int(factor_s), n_blocks=1, init_channels=64*2**int(factor_s))
+  scale_power = int(factor_s)
+  scale_power = 3
+  n_blocks = 1
+  depth = 5
+  init_channels = 64
+
+  net = UNet(depth=depth, scale_power=scale_power, n_blocks=n_blocks, init_channels=init_channels)
   loadNetEval(filename, net, device)
   #loadNetEval("/content/drive/MyDrive/Colab Notebooks/" + filename, net, device)
   net.to(device)
@@ -79,7 +85,7 @@ if __name__ == '__main__':
   
   #y = net(transforms.ToTensor()(x).unsqueeze(0).to(device))
   #im = transforms.ToPILImage()(y.squeeze())
-  im = predict(x, net, device)
+  im = predict(x, net, device, scale_power, depth+scale_power)
     
   im.save("result.png")
   plt.figure()
