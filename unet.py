@@ -83,12 +83,12 @@ class UpscaleBlock(nn.Module): # A*A*C -> 2A*2A*C/2
     return x
 
 class Decoder(nn.Module):
-  def __init__(self, nchannels, scale_power):
+  def __init__(self, nchannels, n_blocks, scale_power):
     super().__init__()
     self.nchannels = nchannels
     self.upconvs = nn.ModuleList([UpscaleBlock(nchannels[i], nchannels[i]//2) for i in range(len(nchannels)-1)])
-    self.blocks = nn.ModuleList([CnnBlock(nchannels[i], nchannels[i+1]) for i in range(len(nchannels)-1)])
-    self.finalBlock = CnnBlock(nchannels[-1], 3, skip_final_activation=True)
+    self.blocks = nn.ModuleList([CnnBlock(nchannels[i], nchannels[i+1]) if n_blocks > 0 else nn.Conv2d(nchannels[i], nchannels[i+1], 3, stride=1, padding=1) for i in range(len(nchannels)-1)])
+    self.finalBlock = CnnBlock(nchannels[-1], 3, skip_final_activation=True) if n_blocks > 0 else nn.Conv2d(nchannels[-1], 3, 3, stride=1, padding=1)
     #self.finalUpscale = UpscaleBlock(nchannels[-1], nchannels[-1])
     #self.finalBlock = CnnBlock(nchannels[-1], 3, skip_final_activation=True)
 
@@ -96,6 +96,9 @@ class Decoder(nn.Module):
     for i in range(len(self.nchannels)-1):
       x = self.upconvs[i](x)
       x = torch.cat([x, encoder_features[i]], dim=1)
+      temp = encoder_features[i]
+      del temp
+      encoder_features[i] = None # does this clear up things?
       x = self.blocks[i](x)
     #x = self.finalUpscale(x)
     x = torch.sigmoid(self.finalBlock(x))
@@ -112,7 +115,7 @@ class UNet(nn.Module):
     self.nchannels = [init_channels // 2**i for i in range(scale_power, 0, -1)] + self.nchannels
     print("nchannels:", [3] + self.nchannels)
     self.encoder = Encoder([3] + self.nchannels, n_blocks, scale_power)
-    self.decoder = Decoder(self.nchannels[::-1], scale_power) # reverse
+    self.decoder = Decoder(self.nchannels[::-1], n_blocks, scale_power) # reverse
 
   def forward(self, x):
     encoder_features = self.encoder(x)
@@ -122,8 +125,8 @@ class UNet(nn.Module):
 from torchsummary import summary
 
 if __name__ == "__main__":
-  x = torch.randn(4, 3, 192, 256)
-  net = UNet(depth=5, scale_power=2, n_blocks=0)
+  x = torch.randn(4, 3, 64, 96)
+  net = UNet(depth=4, scale_power=3, n_blocks=0)
   summary(net, (3, 192, 256), batch_size=5)
-  #y = net(x)
+  y = net(x)
   print(y.shape)
