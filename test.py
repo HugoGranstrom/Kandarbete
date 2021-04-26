@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
   device = torch.device(device_name)
 
-  filename = "net_UNet_nblocks1.pt"
+  filename = "net_ssim_2x.pt"
 
   factor_s = input("Enter dimension upscale factor: 2^")
   if factor_s == "":
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     print("=",2**factor)
   
   scale_power = int(factor_s)
-  scale_power = 3
+  #scale_power = 3
   n_blocks = 1
   depth = 5
   init_channels = 64

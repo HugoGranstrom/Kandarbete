@@ -37,6 +37,8 @@ from collections import namedtuple
 import torch
 from torchvision import models
 
+import piqa
+
 class Vgg16(torch.nn.Module):
     def __init__(self, requires_grad=False):
         super(Vgg16, self).__init__()
@@ -119,7 +121,7 @@ if __name__ == '__main__':
   lr_min = 0.0001
   lr_max = 0.0005
 
-  scale_power = 3
+  scale_power = 1
   n_blocks = 1
   depth = 5
   init_channels = 64
@@ -127,7 +129,7 @@ if __name__ == '__main__':
   net = UNet(depth=depth, scale_power=scale_power, init_channels=init_channels, n_blocks=n_blocks).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=lr_min)
 
-  filename = "net_UNet_nblocks1.pt"
+  filename = "net_ssim_2x.pt"
 
   iterations, train_losses, val_losses = loadNet(filename, net, optimizer, device)
   best_loss = min(val_losses) if len(val_losses) > 0 else 1e6
@@ -139,6 +141,8 @@ if __name__ == '__main__':
   net.to(device)
   validation_size = 100
   vgg = Vgg16(requires_grad=False).to(device).eval()
+
+  ssim = piqa.MS_SSIM().to(device)
 
   high_res_size = (256, 256)
   low_res_size = (high_res_size[0] // 2**scale_power, high_res_size[1] // 2**scale_power)
@@ -158,8 +162,8 @@ if __name__ == '__main__':
   validation_size = len(validation_data)
   """
   
-  print_every = 100
-  save_every = 500
+  print_every = 50
+  save_every = 250
   i = iteration
   for epoch in range(1000):  # loop over the dataset multiple times
 
@@ -179,14 +183,16 @@ if __name__ == '__main__':
           # forward + backward + optimize
           outputs = net(inputs)
           
-          sobel_loss = 0.1*F.smooth_l1_loss(sobel_filter(outputs,device), sobel_filter(labels.detach(),device))
-          pixel_loss = F.smooth_l1_loss(outputs, labels)
+          #sobel_loss = 0.1*F.l1_loss(laplace_filter(outputs,device), laplace_filter(labels,device))
+          sobel_loss = 1-ssim(outputs, labels)
+          pixel_loss = 0.25*F.l1_loss(outputs, labels)
           
           sobel_running_loss += sobel_loss.item()
           pix_running_loss += pixel_loss.item()
           
           loss = sobel_loss
           loss += pixel_loss
+          #loss += 0.05*perceptual_loss(outputs, labels, vgg)
           
           
           loss.backward()
@@ -216,7 +222,7 @@ if __name__ == '__main__':
                 labels = labels.to(device)
                 outputs_val = net(inputs)
                 per_loss = perceptual_loss(outputs_val, labels, vgg)
-                pix_loss = F.smooth_l1_loss(outputs_val, labels)
+                pix_loss = F.l1_loss(outputs_val, labels)
                 percep_loss += per_loss.item()
                 pixel_loss += pix_loss.item()
 
