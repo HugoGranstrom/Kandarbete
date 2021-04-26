@@ -86,7 +86,7 @@ if __name__ == '__main__':
   net.train()
   net.to(device)
   validation_size = 100
-  batch_size = 8
+  batch_size = 1
 
   dataset = OpenDataset(ids[:-validation_size], batch_size=batch_size, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_dataset = OpenDataset(ids[-validation_size:], batch_size=batch_size, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
@@ -105,8 +105,8 @@ if __name__ == '__main__':
   normalize = transforms.Normalize(mean.tolist(), std.tolist())
   
   
-  print_every = 100
-  save_every = 500
+  print_every = 50
+  save_every = 200
   i = iteration
   for epoch in range(1000):  # loop over the dataset multiple times
 
@@ -120,42 +120,29 @@ if __name__ == '__main__':
           inputs = inputs.to(device)
           real = real.to(device)
           # zero the parameter gradients
-          optimizer_disc.zero_grad()
           
           batch_size = len(inputs)
           
-          real_labels = torch.full((batch_size,), real_label, dtype=torch.float, device=device)
-          output = torch.sigmoid(disc(normalize(real)))
-          errD_real = criterion(output.squeeze(), real_labels.squeeze())
-          errD_real.backward()
-
-          # forward + backward + optimize
+          disc.zero_grad()
+          real_out = torch.sigmoid(disc(normalize(real))).mean()
           fakes = net(inputs)
-          fake_labels = torch.full((batch_size,), fake_label, dtype=torch.float, device=device)
-          output = torch.sigmoid(disc(normalize(fakes.detach())).view(-1))
-          errD_fake = criterion(output.squeeze(), fake_labels.squeeze())
-          errD_fake.backward()
-          errD = errD_real + errD_fake
+          fake_out = torch.sigmoid(disc(normalize(fakes.detach())).view(-1)).mean()
+          errD = 1-real_out + fake_out
+          errD.backward()
           optimizer_disc.step()
-
-          optimizer.zero_grad()
-          output = torch.sigmoid(disc(normalize(fakes)).view(-1))
-          errG = criterion(output, real_labels)
-          loss = 1e-3 * errG
-          loss += F.l1_loss(real, fakes)
-          loss.backward()
+          
+          net.zero_grad()
+          errG = 1 - torch.sigmoid(disc(normalize(fakes))).mean()
+          errG.backward()
           optimizer.step()
+          
+          errorD = errD.item()
+          errorG = errG.item()
 
-          errorD = errD.mean().item()
-          errorG = errG.mean().item()
-          #loss = perceptual_loss(outputs, real, vgg)
-          #loss += F.l1_loss(outputs, real)
-          #loss.backward()
-          #optimizer.step()
-          #scheduler.step()
           running_lossG += errorG
           running_lossD += errorD
-          train_loss += loss.item()
+          train_loss += errorG
+          
           # print statistics
           if i % print_every == 0:
               print('[%d, %5d] lossG: %.4f' %
