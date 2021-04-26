@@ -87,9 +87,8 @@ if __name__ == '__main__':
   optimizer = torch.optim.Adam(net.parameters(), lr=0.0002)
   
   disc = AdverserialModel(256).to(device)
-  optimizer_disc = torch.optim.Adam(disc.parameters(), lr=0.0002)
 
-  criterion = nn.BCELoss()
+  optimizer_disc = torch.optim.Adam(disc.parameters(), lr=0.0002)
 
   real_label = 1.
   fake_label = 0.
@@ -106,6 +105,9 @@ if __name__ == '__main__':
   net.to(device)
   validation_size = 100
   """dataset = OpenDataset(ids[:-validation_size], batch_size=batch_size, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
+  batch_size = 8
+
+  dataset = OpenDataset(ids[:-validation_size], batch_size=batch_size, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_dataset = OpenDataset(ids[-validation_size:], batch_size=batch_size, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_data = [i for i in validation_dataset]
   validation_size = len(validation_data)
@@ -136,24 +138,18 @@ if __name__ == '__main__':
           
           batch_size = len(inputs)
           
-          real_labels = torch.full((batch_size,), real_label, dtype=torch.float, device=device)
-          output = disc(real)
-          errD_real = criterion(output.squeeze(), real_labels.squeeze())
-          errD_real.backward()
-
-          # forward + backward + optimize
+          disc.zero_grad()
+          real_out = (disc((real))).mean()
           fakes = net(inputs)
-          fake_labels = torch.full((batch_size,), fake_label, dtype=torch.float, device=device)
-          output = disc(fakes.detach()).view(-1)
-          errD_fake = criterion(output.squeeze(), fake_labels.squeeze())
-          errD_fake.backward()
-          errD = errD_real + errD_fake
+          fake_out = (disc((fakes.detach())).view(-1)).mean()
+          errD = 1-real_out + fake_out
+          errD.backward()
           optimizer_disc.step()
-
-          optimizer.zero_grad()
-          output = disc(fakes).view(-1)
-          errG = criterion(output, real_labels)
-          errG.backward()
+          
+          net.zero_grad()
+          errG = 1 - (disc((fakes))).mean()
+          loss = 0.01*errG + F.l1_loss(fakes,real)
+          loss.backward()
           optimizer.step()
 
           errorD = errD.mean().item()
