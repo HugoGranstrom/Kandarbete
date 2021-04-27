@@ -11,6 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from PIL import Image
 import time
+import random
 import os
 import numpy as np
 
@@ -44,6 +45,7 @@ class FolderSet(Dataset):
     this.toTensor = transforms.Compose([transforms.ToTensor()])
     
     this.files = glob.glob(f"{root_dir}/*.png")
+    random.shuffle(this.files)
     this.length = len(this.files)*length_multiplier
       
   def __len__(this):
