@@ -44,12 +44,14 @@ if __name__ == '__main__':
     imf = "imgs/0a2cc77c7437e2fb.jpg"
     
 
+  device_name = "none"
   if torch.cuda.is_available():
-    device_name = "none"
     while device_name != 'cuda' and device_name != 'cpu':
       device_name = input("Enter device ('cuda', 'cpu'):")
       if device_name == "":
         device_name = 'cuda'
+  else:
+    device_name = "cpu"
 
   device = torch.device(device_name)
 
@@ -78,7 +80,7 @@ if __name__ == '__main__':
   #y = net(transforms.ToTensor()(x).unsqueeze(0).to(device))
   #im = transforms.ToPILImage()(y.squeeze())
   im = predict(x, net, device)
-  for i in range(factor-2):
+  for i in range(factor-1):
     im = predict(im,net,device)
     
   im.save("result.png")
@@ -86,8 +88,15 @@ if __name__ == '__main__':
   plt.imshow(im)
   plt.show(block=False)
   plt.pause(0.05)
-  plt.figure()
-
+  
+  fig = plt.figure()
+  """fig.add_subplot(1,3,1)
+  y = transforms.Resize((x.size[1]*(2**factor), x.size[0]*(2**factor)), transforms.InterpolationMode.NEAREST)(x)
+  plt.imshow(y)
+  fig.add_subplot(1,3,2)
+  y = transforms.Resize((x.size[1]*(2**factor), x.size[0]*(2**factor)), transforms.InterpolationMode.BILINEAR)(x)
+  plt.imshow(y)
+  fig.add_subplot(1,3,3)"""
   y = transforms.Resize((x.size[1]*(2**factor), x.size[0]*(2**factor)), transforms.InterpolationMode.LANCZOS)(x)
   plt.imshow(y)
   plt.show()

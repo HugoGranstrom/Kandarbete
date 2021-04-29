@@ -50,16 +50,21 @@ class AdverserialModel(nn.Module):
       nn.LeakyReLU(0.2, inplace=True),
       nn.Conv2d(64, 128, 3,padding=1, stride=2), # 73 728
       nn.LeakyReLU(0.2, inplace=True),
-      nn.Conv2d(128, 128, 3,padding=1, stride=2), # 147 456
+      nn.Conv2d(128, 256, 3,padding=1, stride=2), # 
       nn.LeakyReLU(0.2, inplace=True),
-      nn.Conv2d(128, 128, 3,padding=1, stride=2), # 147 456
+      nn.Conv2d(256, 512, 3,padding=1, stride=2), # 
       nn.LeakyReLU(0.2, inplace=True),
+      nn.Conv2d(512, 1024, 3,padding=1, stride=2), #
+      nn.LeakyReLU(0.2, inplace=True),
+      nn.Conv2d(1024, 2048, 3,padding=1, stride=2), #
+      nn.LeakyReLU(0.2, inplace=True),
+      
       
       nn.Flatten(),
       
-      nn.Linear(int(128*high_res*high_res/1024), 8096), # 8 388 608
+      nn.Linear(int(2048*high_res*high_res/(4**7)), 1024), # 8 388 608
       nn.LeakyReLU(0.2, inplace=True),
-      nn.Linear(8096, 1024),
+      nn.Linear(1024, 1024),
       nn.LeakyReLU(0.2, inplace=True),
       nn.Linear(1024, 128),
       nn.LeakyReLU(0.2, inplace=True),
@@ -109,25 +114,30 @@ if __name__ == '__main__':
 
   net.train()
   net.to(device)
+  
   validation_size = 100
-  """dataset = OpenDataset(ids[:-validation_size], batch_size=batch_size, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
-  batch_size = 8
-
+  batch_size = 10
+  """
   dataset = OpenDataset(ids[:-validation_size], batch_size=batch_size, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
-  validation_dataset = OpenDataset(ids[-validation_size:], batch_size=batch_size, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
+  validation_dataset = OpenDataset(ids[-validation_size:], batch_size=16, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
   validation_data = [i for i in validation_dataset]
   validation_size = len(validation_data)
   """
   traindata = FolderSet("train")
   validdata = FolderSet("valid")
 
-  dataset = DataLoader(traindata, batch_size=8, num_workers = 7)
-  validation_data = DataLoader(validdata, batch_size=10)
+  dataset = DataLoader(traindata, batch_size=10, num_workers = 4)
+  validation_dataset = DataLoader(validdata, batch_size=16, num_workers = 4)
+  
+  validation_data = [i for i in validation_dataset]
   validation_size = len(validation_data)
   
-  print_every = 50
+  #dataset = DataLoader(FolderSet("text"), batch_size=10, num_workers = 7)
+  
+  print("Datasets loaded")
+  print_every = 100
   save_every = 500
-  disc_training_factor = 5
+  disc_training_factor = 1
   i = iteration
   
   criterion = nn.BCEWithLogitsLoss()
@@ -144,33 +154,35 @@ if __name__ == '__main__':
           
           batch_size = len(inputs)
           
-          fake_labels = torch.zeros(batch_size).unsqueeze(-1).to(device)
           real_labels = torch.ones(batch_size).unsqueeze(-1).to(device)
           
           disc.zero_grad()
-          real_out = criterion(disc(real),real_labels)
+          real_out = disc(real)
           fakes = net(inputs)
-          fake_out = criterion(disc(fakes.detach()),fake_labels)
-          errD = real_out + fake_out
-          errD.backward()
-          optimizer_disc.step()
           
+          net.zero_grad()
+          fake_out = disc(fakes)
+          errG = (torch.mean((real_out - torch.mean(fake_out) + 1)**2) + torch.mean((fake_out - torch.mean(real_out) - 1)**2))/2
+          
+          loss = 0.01*errG + F.l1_loss(fakes,real) + F.l1_loss(sobel_filter(fakes,device),sobel_filter(real,device))
+          loss.backward(retain_graph=True)
+          optimizer.step()
+          
+          fake_out = disc(fakes.detach())
+          errD = (torch.mean((real_out - torch.mean(fake_out) - 1)**2) + torch.mean((fake_out - torch.mean(real_out) + 1)**2))/2
+          
+          errD.backward()
           running_lossD += errD.item()
           
-          if i % disc_training_factor == 0:
-            net.zero_grad()
-            errG = criterion(disc(fakes), fake_labels)
-            loss = 0.001*errG + F.l1_loss(fakes,real) + F.l1_loss(sobel_filter(fakes,device),sobel_filter(real,device))
-            loss.backward()
-            optimizer.step()
-            running_lossG += errG.item()
-            running_loss += loss.item()
+          optimizer_disc.step()
 
-          #loss = perceptual_loss(outputs, real, vgg)
-          #loss += F.l1_loss(outputs, real)
-          #loss.backward()
-          #optimizer.step()
-          #scheduler.step()
+
+          running_lossG += errG.item()
+          loss_item = loss.item()
+          running_loss += loss_item
+          train_loss += loss_item
+
+
           # print statistics
           if i % print_every == 0:
               print('[%d, %5d, (%d)] loss: %.4f' %
@@ -181,11 +193,11 @@ if __name__ == '__main__':
                     (epoch, i, running_lossD / print_every))
               running_lossD, running_lossG, running_loss = 0.0, 0.0, 0.0
           if i % save_every == save_every-1:
+            train_losses.append(train_loss/(save_every/disc_training_factor))
             train_loss = 0.0
             iterations.append(i)
             saveNet(filename, net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
             print("Saved model!")
-            """
             with torch.no_grad():
               net.eval()
               percep_loss = 0
@@ -194,7 +206,7 @@ if __name__ == '__main__':
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 outputs_val = net(inputs)
-                per_loss = perceptual_loss(outputs_val, labels, vgg)
+                per_loss = F.l1_loss(sobel_filter(outputs_val,device),sobel_filter(labels,device))
                 pix_loss = F.l1_loss(outputs_val, labels)
                 percep_loss += per_loss.item()
                 pixel_loss += pix_loss.item()
@@ -204,12 +216,12 @@ if __name__ == '__main__':
               validation_loss = percep_loss + pixel_loss
               val_losses.append(validation_loss)
               
-              print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "Perceptual:", percep_loss, "lr:", scheduler.get_last_lr())
+              print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "Sobel:", percep_loss)
               net.train()
               if validation_loss < best_loss:
                 saveNet(filename + "_best", net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
                 print(f"New best loss: {best_loss} -> {validation_loss}")
                 best_loss = validation_loss
-            """
+            
               
                 
