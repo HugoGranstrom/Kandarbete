@@ -135,7 +135,7 @@ if __name__ == '__main__':
   #dataset = DataLoader(FolderSet("text"), batch_size=10, num_workers = 7)
   
   print("Datasets loaded")
-  print_every = 100
+  print_every = 50
   save_every = 500
   disc_training_factor = 1
   i = iteration
@@ -202,6 +202,7 @@ if __name__ == '__main__':
               net.eval()
               percep_loss = 0
               pixel_loss = 0
+              psnr = 0
               for inputs, labels in validation_data:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
@@ -210,13 +211,16 @@ if __name__ == '__main__':
                 pix_loss = F.l1_loss(outputs_val, labels)
                 percep_loss += per_loss.item()
                 pixel_loss += pix_loss.item()
+                psnr += torch.mean(10*torch.log10(1/F.mse_loss(outputs_val,labels))).item()
+                
 
               percep_loss /= validation_size
               pixel_loss /= validation_size
+              psnr /= validation_size
               validation_loss = percep_loss + pixel_loss
               val_losses.append(validation_loss)
               
-              print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "Sobel:", percep_loss)
+              print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "Sobel:", percep_loss, "Mean PSNR:", psnr)
               net.train()
               if validation_loss < best_loss:
                 saveNet(filename + "_best", net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)

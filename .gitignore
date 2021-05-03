@@ -12,3 +12,4 @@ net_UNet_v2.pt_best
 *.png
 *.jpg
 *.pt
+*.pt_best
