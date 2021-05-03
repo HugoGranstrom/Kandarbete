@@ -155,7 +155,7 @@ if __name__ == '__main__':
           # forward + backward + optimize
           outputs = net(inputs)
           
-          sobel_loss = 0.1*F.mse_loss(sobel_filter(outputs,device), sobel_filter(labels,device))
+          sobel_loss = F.l1_loss(sobel_filter(outputs,device), sobel_filter(labels,device))
           pixel_loss = F.l1_loss(outputs, labels)
           
           sobel_running_loss += sobel_loss.item()
