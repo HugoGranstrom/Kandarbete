@@ -95,8 +95,8 @@ if __name__ == '__main__':
   #dataset = DataLoader(FolderSet("text"), batch_size=10, num_workers = 7)
   
   print("Datasets loaded")
-  print_every = 1
-  save_every = 5
+  print_every = 10
+  save_every = 50
   i = iteration
   
   for epoch in range(1000):  # loop over the dataset multiple times
@@ -127,7 +127,7 @@ if __name__ == '__main__':
           net.zero_grad()
           errG = (torch.mean((real_out - torch.mean(fake_out) + 1)**2) + torch.mean((fake_out - torch.mean(real_out) - 1)**2))/2
           
-          loss = 0.01*errG + F.l1_loss(fakes,real) + F.l1_loss(sobel_filter(fakes,device),sobel_filter(real,device))
+          loss = 0.001*errG + criterion(real, fakes)
           loss.backward(retain_graph=True)
           optimizer.step()
           
