@@ -79,7 +79,7 @@ def saveNet(filename, net, optimizer, iterations, train_loss, val_loss):
 def loadNet(filename, net, optimizer, device):
   try:
     checkpoint = torch.load(filename, map_location=device)
-    net.load_state_dict(checkpoint["net"])
+    net.load_state_dict(checkpoint["gen"])
     optimizer.load_state_dict(checkpoint["optimizer"])
     iteration = checkpoint["iteration"]
     train_loss = checkpoint["loss"]
@@ -93,7 +93,7 @@ def loadNet(filename, net, optimizer, device):
 def loadNetEval(filename, net, device):
   try:
     checkpoint = torch.load(filename, map_location=device)
-    net.load_state_dict(checkpoint["net"])
+    net.load_state_dict(checkpoint["gen"])
     net.eval()
     print(filename, "successfully loaded in eval mode")
   except (OSError, FileNotFoundError):

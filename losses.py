@@ -2,6 +2,7 @@ import torch
 from torchvision import models
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import transforms
 
 class AdverserialModel(nn.Module):
   def __init__(this, high_res):
@@ -101,10 +102,7 @@ def perceptual_loss(real, fake, vgg):
   normalize = transforms.Normalize(mean.tolist(), std.tolist())
   unnormalize = transforms.Normalize((-mean / std).tolist(), (1.0 / std).tolist())
 
-  #features_y = vgg(normalize(y))
-  #features_y_hat = vgg(normalize(y_hat))
-  #loss = 0.5 * F.mse_loss(features_y_hat.relu2_2, features_y.relu2_2)
-  loss = 0.5 * vgg.calcLoss(normalize(fake), normalize(real))
+  loss = vgg.calcLoss(normalize(fake), normalize(real))
   return loss
 
 
@@ -114,3 +112,6 @@ def sobel_filter(y, device):
   Gx = F.conv2d(y, kernel_x, groups=y.shape[1])
   Gy = F.conv2d(y, kernel_y, groups=y.shape[1])
   return (Gx**2 + Gy**2 + 1e-8).sqrt()
+
+def psnr(real, fake):
+  torch.mean(-10*torch.log10(F.mse_loss(real, fake)))
