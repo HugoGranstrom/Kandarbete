@@ -41,7 +41,18 @@ class NinetiesRotation:
     def __call__(self, x):
         angle = random.choice(self.angles)
         return transforms.functional.rotate(x, angle)
+        
+class RandomDownsampling:
+    """Rotate by one of the given angles."""
 
+    def __init__(self, low_res_size):
+        self.low_res_size = low_res_size
+        self.methods = [transforms.InterpolationMode.LANCZOS, transforms.InterpolationMode.BICUBIC, transforms.InterpolationMode.BILINEAR]
+
+    def __call__(self, x):
+        mode = random.choice(self.methods)
+        return transforms.functional.resize(x, self.low_res_size, mode)
+        
 class OpenDataset:
   def __init__(this, ids, batch_size,SUPER_BATCHING = 30, high_res_size = (200, 200), low_res_size = (100, 100)):
     ## ids: list of Google Open Image Dataset ids
@@ -69,8 +80,9 @@ class OpenDataset:
                                               ])
     # Transforms a high-res image to a downscaled low-res image
     this.X_transforms = transforms.Compose([
-                                            transforms.Resize(low_res_size, transforms.InterpolationMode.BILINEAR)
+                                            RandomDownsampling(low_res_size)
                                             ])
+                                            
     this.toTensor = transforms.Compose([transforms.ToTensor()])
     try:
       os.mkdir("imgs")

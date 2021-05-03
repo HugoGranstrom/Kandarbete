@@ -11,6 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from PIL import Image
 import time
+import random
 import os
 import numpy as np
 
@@ -29,7 +30,7 @@ class NinetiesRotation:
         return transforms.functional.rotate(x, angle)
 
 class FolderSet(Dataset):
-  def __init__(this, root_dir, high_res_size = (256, 256), low_res_size = (128, 128), length_multiplier = 8):
+  def __init__(this, root_dir, high_res_size = (256, 256), low_res_size = (128, 128)):
     this.high_res_size = high_res_size
     this.low_res_size = low_res_size
     this.crop_transform = transforms.Compose([
@@ -44,13 +45,14 @@ class FolderSet(Dataset):
     this.toTensor = transforms.Compose([transforms.ToTensor()])
     
     this.files = glob.glob(f"{root_dir}/*.png")
-    this.length = len(this.files)*length_multiplier
+    random.shuffle(this.files)
+    this.length = len(this.files)
       
   def __len__(this):
     return this.length
     
   def __getitem__(this,idx):
-    im = Image.open(this.files[random.randrange(0,len(this.files))])
+    im = Image.open(this.files[idx])
     im = im if im.mode == "RGB" else im.convert("RGB")
     
     transformed_im = this.crop_transform(im)
