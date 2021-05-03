@@ -38,48 +38,8 @@ from collections import namedtuple
 import torch
 from torchvision import models
 
-class AdverserialModel(nn.Module):
-  def __init__(this, high_res):
-    super().__init__()
-    this.model = nn.Sequential(
-      nn.Conv2d(3, 16, 3,padding=1), # 3*3*3*16 = 432
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Conv2d(16, 32, 3,padding=1, stride=2), # 4608
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Conv2d(32, 64, 3,padding=1, stride=2), # 18 432
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Conv2d(64, 128, 3,padding=1, stride=2), # 73 728
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Conv2d(128, 256, 3,padding=1, stride=2), # 
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Conv2d(256, 512, 3,padding=1, stride=2), # 
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Conv2d(512, 1024, 3,padding=1, stride=2), #
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Conv2d(1024, 2048, 3,padding=1, stride=2), #
-      nn.LeakyReLU(0.2, inplace=True),
-      
-      
-      nn.Flatten(),
-      
-      nn.Linear(int(2048*high_res*high_res/(4**7)), 1024), # 8 388 608
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Linear(1024, 1024),
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Linear(1024, 128),
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Linear(128, 1)
-    )
 
-  def forward(this, x):
-    return this.model(x)
 
-def sobel_filter(y, device):
-  kernel_x = torch.tensor([[1, 0, -1],[2,0,-2],[1,0,-1]]).view(1,1,3,3).expand(3,-1,-1,-1).float().to(device)
-  kernel_y = torch.tensor([[1, 2, 1],[0,0,0],[-1,-2,-1]]).view(1,1,3,3).expand(3,-1,-1,-1).float().to(device)
-  Gx = F.conv2d(y, kernel_x, groups=y.shape[1])
-  Gy = F.conv2d(y, kernel_y, groups=y.shape[1])
-  return (Gx**2 + Gy**2 + 1e-8).sqrt()
 
 if __name__ == '__main__':
   torch.multiprocessing.freeze_support()
