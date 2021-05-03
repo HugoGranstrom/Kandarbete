@@ -95,8 +95,8 @@ if __name__ == '__main__':
   #dataset = DataLoader(FolderSet("text"), batch_size=10, num_workers = 7)
   
   print("Datasets loaded")
-  print_every = 10
-  save_every = 50
+  print_every = 100
+  save_every = 500
   i = iteration
   
   for epoch in range(1000):  # loop over the dataset multiple times
