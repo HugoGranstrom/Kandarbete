@@ -56,14 +56,6 @@ def loadNetGAN(filename, generator, optimizer_gen, discriminator, optimizer_disc
     print(f"Couldn't find {filename}, creating new net!")
     return [], [], []
 
-def loadNetGAN(filename, net, device):
-  try:
-    checkpoint = torch.load(filename, map_location=device)
-    net.load_state_dict(checkpoint["gen"])
-    net.eval()
-    print(filename, "successfully loaded in eval mode")
-  except (OSError, FileNotFoundError):
-    print(f"Couldn't find {filename}")
 
 
 

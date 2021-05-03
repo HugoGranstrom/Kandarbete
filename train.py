@@ -53,9 +53,9 @@ if __name__ == '__main__':
   net = UNet(depth=5).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=common_parameters.learning_rate)
 
-  if len(sys.argv) != 3: raise RuntimeError("Two command-line arguments must be given, the type of loss and the model's filename")
-  filename = sys.argv[2]
-  loss_str = sys.argv[1]
+  if len(sys.argv) != 3: raise RuntimeError("Two command-line arguments must be given, the model's filename and the type of loss")
+  filename = sys.argv[1]
+  loss_str = sys.argv[2]
   # criterion is a function that takes the arguments (real_imgs, fake_imgs) in that order!
   if loss_str == "mse":
     criterion = F.mse_loss
@@ -138,7 +138,6 @@ if __name__ == '__main__':
                 criterion_loss += criterion(real_val, fakes_val).item()
                 psnr_score += psnr(real_val, fakes_val).item()
                 
-
               criterion_loss /= validation_size
               psnr_score /= validation_size
               validation_loss = criterion_loss

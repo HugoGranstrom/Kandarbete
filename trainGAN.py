@@ -38,15 +38,12 @@ from collections import namedtuple
 import torch
 from torchvision import models
 
-
+import common_parameters
+from losses import VGG, perceptual_loss, sobel_filter, psnr, AdverserialModel
 
 
 if __name__ == '__main__':
   torch.multiprocessing.freeze_support()
-
-  csvfile = pd.read_csv("ImageUID.csv", names=["id"])
-  ids = csvfile["id"].values
-  print(len(ids))
 
   torch.manual_seed(1337)
     
@@ -54,39 +51,42 @@ if __name__ == '__main__':
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-  lr_min = 0.0001
-  lr_max = 0.0005
-
   net = UNet(depth=5).to(device)
-  optimizer = torch.optim.Adam(net.parameters(), lr=0.0002)
+  optimizer = torch.optim.Adam(net.parameters(), lr=common_parameters.learning_rate)
   
   disc = AdverserialModel(256).to(device)
 
-  optimizer_disc = torch.optim.Adam(disc.parameters(), lr=0.0002)
+  optimizer_disc = torch.optim.Adam(disc.parameters(), lr=common_parameters.learning_rate)
 
-  filename = "GAN_UNet_v1.pt"
+  if len(sys.argv) != 3: raise RuntimeError("Two command-line arguments must be given, the model's filename and the type of loss")
+  filename = sys.argv[1]
+  loss_str = sys.argv[2]
+  # criterion is a function that takes the arguments (real_imgs, fake_imgs) in that order!
+  if loss_str == "mse":
+    criterion = F.mse_loss
+  elif loss_str == "l1":
+    criterion = F.l1_loss
+  elif loss_str == "sobel":
+    criterion = lambda real, fake: F.l1_loss(real, fake) + F.l1_loss(sobel_filter(real, device), sobel_filter(fake, device))
+  elif loss_str == "perceptual":
+    vgg = VGG().eval().to(device)
+    criterion = lambda real, fake: F.l1_loss(real, fake) + perceptual_loss(real, fake, vgg)
 
-  iterations, train_losses, val_losses = loadNet(filename, net, optimizer, disc, optimizer_disc, device)
+  iterations, train_losses, val_losses = loadNetGAN(filename, net, optimizer, disc, optimizer_disc, device)
   best_loss = min(val_losses) if len(val_losses) > 0 else 1e6
   print("Best validation loss:", best_loss)
   iteration = iterations[-1] if len(iterations) > 0 else -1
-  #scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=lr_min, max_lr=lr_max, step_size_up=2000, last_epoch=iteration, mode="triangular", cycle_momentum=False)
-
+  
   net.train()
   net.to(device)
   
-  validation_size = 100
-  batch_size = 10
-  """
-  dataset = OpenDataset(ids[:-validation_size], batch_size=batch_size, SUPER_BATCHING=40, high_res_size=(256, 256), low_res_size=(128, 128))
-  validation_dataset = OpenDataset(ids[-validation_size:], batch_size=16, SUPER_BATCHING=1, high_res_size=(256, 256), low_res_size=(128, 128))
-  validation_data = [i for i in validation_dataset]
-  validation_size = len(validation_data)
-  """
+
+  batch_size = common_parameters.batch_size
+
   traindata = FolderSet("train")
   validdata = FolderSet("valid")
 
-  dataset = DataLoader(traindata, batch_size=10, num_workers = 4)
+  dataset = DataLoader(traindata, batch_size=batch_size, num_workers = 4)
   validation_dataset = DataLoader(validdata, batch_size=16, num_workers = 4)
   
   validation_data = [i for i in validation_dataset]
@@ -95,18 +95,18 @@ if __name__ == '__main__':
   #dataset = DataLoader(FolderSet("text"), batch_size=10, num_workers = 7)
   
   print("Datasets loaded")
-  print_every = 50
-  save_every = 500
-  disc_training_factor = 1
+  print_every = 1
+  save_every = 5
   i = iteration
   
-  criterion = nn.BCEWithLogitsLoss()
   for epoch in range(1000):  # loop over the dataset multiple times
 
       running_lossD, running_lossG, running_loss = 0.0, 0.0, 0.0
       train_loss = 0.0
       for data in dataset:
           i += 1
+          if i > common_parameters.end_iterations - 1:
+            break
           # get the inputs; data is a list of [inputs, labels]
           inputs, real = data
           inputs = inputs.to(device)
@@ -114,20 +114,28 @@ if __name__ == '__main__':
           
           batch_size = len(inputs)
           
-          real_labels = torch.ones(batch_size).unsqueeze(-1).to(device)
+          #real_labels = torch.ones(batch_size).unsqueeze(-1).to(device)
           
-          disc.zero_grad()
+          # Freeze weights of disc while training generator:
+          for param in disc.parameters():
+            param.requires_grad = False
+
           real_out = disc(real)
           fakes = net(inputs)
-          
-          net.zero_grad()
           fake_out = disc(fakes)
+
+          net.zero_grad()
           errG = (torch.mean((real_out - torch.mean(fake_out) + 1)**2) + torch.mean((fake_out - torch.mean(real_out) - 1)**2))/2
           
           loss = 0.01*errG + F.l1_loss(fakes,real) + F.l1_loss(sobel_filter(fakes,device),sobel_filter(real,device))
           loss.backward(retain_graph=True)
           optimizer.step()
           
+          # Unfreeze disc's weights
+          for param in disc.parameters():
+            param.requires_grad = True
+
+          disc.zero_grad()
           fake_out = disc(fakes.detach())
           errD = (torch.mean((real_out - torch.mean(fake_out) - 1)**2) + torch.mean((fake_out - torch.mean(real_out) + 1)**2))/2
           
@@ -145,47 +153,44 @@ if __name__ == '__main__':
 
           # print statistics
           if i % print_every == 0:
-              print('[%d, %5d, (%d)] loss: %.4f' %
-                    (epoch, i, i/disc_training_factor, running_loss / (print_every/disc_training_factor)))
+              print('[%d, %5d] loss: %.4f' %
+                    (epoch, i, running_loss / print_every))
               print('[%d, %5d] lossG: %.4f' %
-                    (epoch, i, running_lossG / (print_every/disc_training_factor)))
+                    (epoch, i, running_lossG / print_every))
               print('[%d, %5d] lossD: %.4f' %
                     (epoch, i, running_lossD / print_every))
               running_lossD, running_lossG, running_loss = 0.0, 0.0, 0.0
           if i % save_every == save_every-1:
-            train_losses.append(train_loss/(save_every/disc_training_factor))
+            train_losses.append(train_loss/save_every)
             train_loss = 0.0
             iterations.append(i)
-            saveNet(filename, net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
+            saveNetGAN(filename, net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
             print("Saved model!")
             with torch.no_grad():
               net.eval()
-              percep_loss = 0
-              pixel_loss = 0
-              psnr = 0
+              criterion_loss = 0.0
+              psnr_score = 0
               for inputs, labels in validation_data:
                 inputs = inputs.to(device)
-                labels = labels.to(device)
-                outputs_val = net(inputs)
-                per_loss = F.l1_loss(sobel_filter(outputs_val,device),sobel_filter(labels,device))
-                pix_loss = F.l1_loss(outputs_val, labels)
-                percep_loss += per_loss.item()
-                pixel_loss += pix_loss.item()
-                psnr += torch.mean(10*torch.log10(1/F.mse_loss(outputs_val,labels))).item()
+                real_val = labels.to(device)
+                fakes_val = net(inputs)
+                criterion_loss += criterion(real_val, fakes_val).item()
+                psnr_score += psnr(real_val, fakes_val).item()
                 
-
-              percep_loss /= validation_size
-              pixel_loss /= validation_size
-              psnr /= validation_size
-              validation_loss = percep_loss + pixel_loss
+              criterion_loss /= validation_size
+              psnr_score /= validation_size
+              validation_loss = criterion_loss
               val_losses.append(validation_loss)
               
-              print("Validation loss:", validation_loss, "Pixel:", pixel_loss, "Sobel:", percep_loss, "Mean PSNR:", psnr)
+              print("Validation loss:", validation_loss, "Mean PSNR:", psnr_score)
               net.train()
               if validation_loss < best_loss:
-                saveNet(filename + "_best", net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
+                saveNetGAN(filename + "_best", net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
                 print(f"New best loss: {best_loss} -> {validation_loss}")
                 best_loss = validation_loss
-            
+      # This code makes sure that we break both loops if the inner loop is broken out of:
+      else:
+        continue
+      break      
               
                 
