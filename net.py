@@ -69,7 +69,7 @@ def loadNetGAN(filename, net, device):
 
 def saveNet(filename, net, optimizer, iterations, train_loss, val_loss):
   torch.save({
-      "net": net.state_dict(),
+      "gen": net.state_dict(),
       "optimizer": optimizer.state_dict(),
       "iteration": iterations,
       "loss": train_loss,

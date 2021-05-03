@@ -114,4 +114,4 @@ def sobel_filter(y, device):
   return (Gx**2 + Gy**2 + 1e-8).sqrt()
 
 def psnr(real, fake):
-  torch.mean(-10*torch.log10(F.mse_loss(real, fake)))
+  return -10*torch.log10(F.mse_loss(real, fake))
