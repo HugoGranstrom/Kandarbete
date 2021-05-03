@@ -116,11 +116,8 @@ if __name__ == '__main__':
           
           #real_labels = torch.ones(batch_size).unsqueeze(-1).to(device)
           
-          # Freeze weights of disc while training generator:
-          #for param in disc.parameters():
-          #  param.requires_grad = False
-
           net.zero_grad()
+          
           real_out = disc(real)
           fakes = net(inputs)
           
@@ -130,10 +127,6 @@ if __name__ == '__main__':
           loss = 0.001*errG + criterion(real, fakes)
           loss.backward(retain_graph=True)
           optimizer.step()
-          
-          # Unfreeze disc's weights
-          #for param in disc.parameters():
-          #  param.requires_grad = True
 
           disc.zero_grad()
           fake_out = disc(fakes.detach())
