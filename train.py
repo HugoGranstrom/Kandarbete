@@ -98,6 +98,8 @@ if __name__ == '__main__':
       train_loss = 0.0
       for data in dataset:
           i += 1
+          if i > common_parameters.end_iterations - 1:
+            break
           # get the inputs; data is a list of [inputs, labels]
           inputs, real = data
           inputs = inputs.to(device)
@@ -148,8 +150,6 @@ if __name__ == '__main__':
                 saveNet(filename + "_best", net, optimizer, iterations, train_losses, val_losses)
                 print(f"New best loss: {best_loss} -> {validation_loss}")
                 best_loss = validation_loss
-          if i > common_parameters.end_iterations:
-            break
       # This code makes sure that we break both loops if the inner loop is broken out of:
       else:
         continue
