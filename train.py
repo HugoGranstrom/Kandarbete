@@ -142,7 +142,7 @@ if __name__ == '__main__':
               validation_loss = criterion_loss
               val_losses.append(validation_loss)
               
-              print("Validation loss:", validation_loss, "Mean PSNR:", psnr)
+              print("Validation loss:", validation_loss, "Mean PSNR:", psnr_score)
               net.train()
               if validation_loss < best_loss:
                 saveNet(filename + "_best", net, optimizer, iterations, train_losses, val_losses)
