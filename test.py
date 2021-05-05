@@ -38,7 +38,10 @@ def predict(image, net, device):
     return im
 
 if __name__ == '__main__':
-  imf = input("Enter file: ")
+
+
+  filename = input("Enter model file: ");
+  imf = input("Enter image file: ")
   if imf == "":
     OpenDataset([],1).download_image("0a2cc77c7437e2fb")
     imf = "imgs/0a2cc77c7437e2fb.jpg"
@@ -54,8 +57,6 @@ if __name__ == '__main__':
     device_name = "cpu"
 
   device = torch.device(device_name)
-
-  filename = "GAN_UNet_v1.pt"
 
   factor_s = input("Enter dimension upscale factor: 2^")
   if factor_s == "":
