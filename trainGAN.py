@@ -158,7 +158,6 @@ if __name__ == '__main__':
             train_loss = 0.0
             iterations.append(i)
             saveNetGAN(filename, net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
-            print("Saved model!")
             with torch.no_grad():
               net.eval()
               criterion_loss = 0.0
@@ -181,6 +180,7 @@ if __name__ == '__main__':
                 saveNetGAN(filename + "_best", net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
                 print(f"New best loss: {best_loss} -> {validation_loss}")
                 best_loss = validation_loss
+            print("Saved model!")
       # This code makes sure that we break both loops if the inner loop is broken out of:
       else:
         continue
