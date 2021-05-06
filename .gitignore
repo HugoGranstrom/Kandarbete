@@ -1,6 +1,7 @@
 imgs/
 train/
 valid/
+runs/
 __pycache__/
 board.png
 lanczos.png
