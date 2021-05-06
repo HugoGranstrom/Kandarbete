@@ -31,7 +31,7 @@ def compat_pad(image, network_depth):
 
 def predict(image, net, device):
   with torch.no_grad():
-    im, padding, original_width, original_height = compat_pad(image, 4)
+    im, padding, original_width, original_height = compat_pad(image, 5)
     y = net(transforms.ToTensor()(im).unsqueeze(0).to(device)).squeeze()
     y = transforms.functional.crop(y, 2*padding[1], 2*padding[0], 2*original_height, 2*original_width)
     im = transforms.ToPILImage()(y)
@@ -73,7 +73,6 @@ if __name__ == '__main__':
   net.eval()
   
   x = Image.open(imf).convert("RGB")
-  #x = Image.open("CAM00017.jpg").convert("RGB")
   plt.imshow(x)
   plt.show(block=False)
   plt.pause(0.05)
@@ -91,13 +90,6 @@ if __name__ == '__main__':
   plt.pause(0.05)
   
   fig = plt.figure()
-  """fig.add_subplot(1,3,1)
-  y = transforms.Resize((x.size[1]*(2**factor), x.size[0]*(2**factor)), transforms.InterpolationMode.NEAREST)(x)
-  plt.imshow(y)
-  fig.add_subplot(1,3,2)
-  y = transforms.Resize((x.size[1]*(2**factor), x.size[0]*(2**factor)), transforms.InterpolationMode.BILINEAR)(x)
-  plt.imshow(y)
-  fig.add_subplot(1,3,3)"""
   y = transforms.Resize((x.size[1]*(2**factor), x.size[0]*(2**factor)), transforms.InterpolationMode.LANCZOS)(x)
   plt.imshow(y)
   plt.show()

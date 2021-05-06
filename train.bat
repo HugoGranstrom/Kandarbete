@@ -1,4 +1,4 @@
 @echo off
 cls
-python trainGAN.py GAN_sobel.pt sobel
+python trainGAN.py GAN_sobel2.pt sobel
 pause

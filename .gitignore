@@ -13,3 +13,4 @@ net_UNet_v2.pt_best
 *.jpg
 *.pt
 *.pt_best
+*.csv

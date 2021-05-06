@@ -101,7 +101,7 @@ if __name__ == '__main__':
   
   for epoch in range(1000):  # loop over the dataset multiple times
 
-      running_lossD, running_lossG, running_loss = 0.0, 0.0, 0.0
+      running_lossD, running_lossG, running_loss = [],[],[]
       train_loss = 0.0
       for data in dataset:
           i += 1
@@ -133,26 +133,26 @@ if __name__ == '__main__':
           errD = (torch.mean((real_out - torch.mean(fake_out) - 1)**2) + torch.mean((fake_out - torch.mean(real_out) + 1)**2))/2
           
           errD.backward()
-          running_lossD += errD.item()
+          running_lossD.append(errD.item())
           
           optimizer_disc.step()
 
 
-          running_lossG += errG.item()
+          running_lossG.append(errG.item())
           loss_item = loss.item()
-          running_loss += loss_item
+          running_loss.append(loss_item)
           train_loss += loss_item
 
 
           # print statistics
           if i % print_every == 0:
-              print('[%d, %5d] loss: %.4f' %
-                    (epoch, i, running_loss / print_every))
-              print('[%d, %5d] lossG: %.4f' %
-                    (epoch, i, running_lossG / print_every))
-              print('[%d, %5d] lossD: %.4f' %
-                    (epoch, i, running_lossD / print_every))
-              running_lossD, running_lossG, running_loss = 0.0, 0.0, 0.0
+            print('[%d, %5d] loss: %.4f' %
+                  (epoch, i, sum(running_loss)/len(running_loss)))
+            print('[%d, %5d] lossG: %.4f' %
+                  (epoch, i, sum(running_lossG)/len(running_lossG)))
+            print('[%d, %5d] lossD: %.4f' %
+                  (epoch, i, sum(running_lossD)/len(running_lossD)))
+            running_lossD, running_lossG, running_loss = [],[],[]
           if i % save_every == save_every-1:
             train_losses.append(train_loss/save_every)
             train_loss = 0.0
