@@ -11,6 +11,31 @@ from losses import *
 from hqset import *
 from unet import *
 
+def compat_pad(image, network_depth):
+    n = 2**network_depth
+    if isinstance(image, Image.Image):
+      width, height = image.size
+    elif isinstance(image, torch.Tensor):
+      shape = image.shape
+      height, width = shape[1], shape[2]
+    else:
+      raise ValueError("image wasn't a PIL image or a Pytorch Tensor")
+    pad_width = n - width % n
+    if pad_width == n: pad_width = 0
+    pad_height = n - height % n
+    if pad_height == n: pad_height = 0
+    if pad_width % 2 == 0:
+      pad_left, pad_right = pad_width//2, pad_width//2
+    else:
+      pad_left, pad_right = pad_width//2, pad_width//2 + 1
+    if pad_height % 2 == 0:
+      pad_up, pad_down = pad_height//2, pad_height//2
+    else:
+      pad_up, pad_down = pad_height//2, pad_height//2 + 1
+    padding = [pad_left, pad_up, pad_right, pad_down]
+    padded_im = transforms.Pad(padding)(image)
+    return padded_im, padding, width, height
+
 if __name__ == '__main__':
   filename = input("Enter model file: ");
 
@@ -23,6 +48,7 @@ if __name__ == '__main__':
         print('cuda')
   else:
     device_name = "cpu"
+    print('cpu')
 
   device = torch.device(device_name)
   
@@ -31,13 +57,8 @@ if __name__ == '__main__':
   net.to(device)
   net.eval()
   
-  validationset = FolderSetFull("valid")
-  files = validationset.files
-  dataset = DataLoader(validationset, batch_size=1, num_workers = 4)
-  
-  
-  toolbar_width = 40
-  toolbar_skips = (int) (len(dataset)/toolbar_width)
+  files = glob.glob("valid/*.png")
+  toolbar_width = len(files)
   
   # setup toolbar
   sys.stdout.write("[%s]" % (" " * toolbar_width))
@@ -47,8 +68,17 @@ if __name__ == '__main__':
     wcsv = csv.writer(file)
     wcsv.writerow(["Index", "File", "Model PSNR", "Lanczos PSNR", "Bilinear PSNR"])
     PSNRs = []
-    for i, data in enumerate(dataset):
-      inputs, real = data
+    toTensor = transforms.Compose([transforms.ToTensor()])
+    
+    for i in range(len(files)):
+      image = Image.open(files[i])
+      image = image if image.mode == "RGB" else image.convert("RGB")
+      im, padding, original_width, original_height = compat_pad(image, 5)
+      real = toTensor(im).unsqueeze(0)
+      sz = im.size
+      inputs = toTensor(transforms.Resize((sz[1]//2,sz[0]//2), transforms.InterpolationMode.BILINEAR)(im)).unsqueeze(0)
+    
+    
       inputs = inputs.to(device)
       real = real.to(device)
       
@@ -57,17 +87,18 @@ if __name__ == '__main__':
         model_psnr = psnr(real,y).item()
         PSNRs.append(model_psnr)
       
-      im = transforms.ToPILImage()(inputs.squeeze())
-      to_tensor = transforms.ToTensor()
-      y_lanz = to_tensor(transforms.Resize((im.size[1]*2, im.size[0]*2), transforms.InterpolationMode.LANCZOS)(im)).unsqueeze(0).to(device)
-      y_blin = to_tensor(transforms.Resize((im.size[1]*2, im.size[0]*2), transforms.InterpolationMode.BILINEAR)(im)).unsqueeze(0).to(device)
-      lanz_psnr = psnr(real,y_lanz).item()
-      blin_psnr = psnr(real,y_blin).item()
+      in_crop = transforms.functional.crop(inputs.squeeze(), padding[1]//2, padding[0]//2, original_height//2, original_width//2)
+      rl_crop = transforms.functional.crop(real.squeeze(), padding[1], padding[0], original_height, original_width)
+      im2 = transforms.ToPILImage()(in_crop)
+      rz_size = (im2.size[1]*2, im2.size[0]*2)
+      y_lanz = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.LANCZOS)(im2)).to(device)
+      y_blin = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.BILINEAR)(im2)).to(device)
+      lanz_psnr = psnr(rl_crop,y_lanz).item()
+      blin_psnr = psnr(rl_crop,y_blin).item()
       
       wcsv.writerow([i, files[i], model_psnr, lanz_psnr, blin_psnr])
-      if i%toolbar_skips==0:
-        sys.stdout.write("#")
-        sys.stdout.flush()
+      sys.stdout.write("#")
+      sys.stdout.flush()
 
   sys.stdout.write("]\n") # this ends the progress bar
   print(PSNRs)

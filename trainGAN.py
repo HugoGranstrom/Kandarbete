@@ -102,9 +102,11 @@ if __name__ == '__main__':
   #dataset = DataLoader(FolderSet("text"), batch_size=10, num_workers = 7)
   
   print("Datasets loaded")
-  print_every = 100
+  print_every = 50
   save_every = 500
   i = iteration
+  
+  speed_mini = read_image("speed-mini.png", mode=ImageReadMode.RGB).to(device).float() / 255.0
   
   for epoch in range(1000):  # loop over the dataset multiple times
 
@@ -159,11 +161,17 @@ if __name__ == '__main__':
                   (epoch, i, sum(running_lossG)/len(running_lossG)))
             print('[%d, %5d] lossD: %.4f' %
                   (epoch, i, sum(running_lossD)/len(running_lossD)))
+            writer.add_scalar("loss/train", sum(running_loss)/len(running_loss), i)
+            writer.add_scalar("loss/train_generator", sum(running_lossG)/len(running_lossG), i)
+            writer.add_scalar("loss/train_discriminator", sum(running_lossD)/len(running_lossD), i)
+            with torch.no_grad():
+              net.eval()
+              writer.add_image("train image", net(speed_mini.unsqueeze(0)).squeeze(), i)
+            net.train()
             running_lossD, running_lossG, running_loss = [],[],[]
           if i % save_every == save_every-1:
             train_losses.append(train_loss/save_every)
             iterations.append(i)
-            writer.add_scalar("loss/train", train_loss/save_every, i)
             train_loss = 0.0
             saveNetGAN(filename, net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
             with torch.no_grad():
@@ -184,7 +192,6 @@ if __name__ == '__main__':
               writer.add_scalar("loss/valid", validation_loss, i)
               writer.add_scalar("psnr/valid", psnr_score, i)
 
-              speed_mini = read_image("speed-mini.png", mode=ImageReadMode.RGB).to(device).float() / 255.0
               writer.add_image("validation image", net(speed_mini.unsqueeze(0)).squeeze(), i)
               
               print("Validation loss:", validation_loss, "Mean PSNR:", psnr_score)
