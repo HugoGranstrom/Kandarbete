@@ -37,10 +37,12 @@ from collections import namedtuple
 
 import torch
 from torchvision import models
+from torchvision.io.image import read_image, ImageReadMode
 
 import common_parameters
 from losses import VGG, perceptual_loss, sobel_filter, psnr, AdverserialModel
 
+from torch.utils.tensorboard import SummaryWriter
 
 if __name__ == '__main__':
   torch.multiprocessing.freeze_support()
@@ -77,6 +79,8 @@ if __name__ == '__main__':
   print("Best validation loss:", best_loss)
   iteration = iterations[-1] if len(iterations) > 0 else -1
   
+  writer = SummaryWriter('runs/' + filename.split('.')[0])
+
   net.train()
   net.to(device)
   
@@ -155,8 +159,9 @@ if __name__ == '__main__':
             running_lossD, running_lossG, running_loss = [],[],[]
           if i % save_every == save_every-1:
             train_losses.append(train_loss/save_every)
-            train_loss = 0.0
             iterations.append(i)
+            writer.add_scalar("loss/train", train_loss/save_every, i)
+            train_loss = 0.0
             saveNetGAN(filename, net, optimizer, disc, optimizer_disc, iterations, train_losses, val_losses)
             with torch.no_grad():
               net.eval()
@@ -173,6 +178,11 @@ if __name__ == '__main__':
               psnr_score /= validation_size
               validation_loss = criterion_loss
               val_losses.append(validation_loss)
+              writer.add_scalar("loss/valid", validation_loss, i)
+              writer.add_scalar("psnr/valid", psnr_score, i)
+
+              speed_mini = read_image("speed-mini.png", mode=ImageReadMode.RGB).to(device).float() / 255.0
+              writer.add_image("validation image", net(speed_mini.unsqueeze(0)).squeeze(), i)
               
               print("Validation loss:", validation_loss, "Mean PSNR:", psnr_score)
               net.train()
@@ -184,6 +194,7 @@ if __name__ == '__main__':
       # This code makes sure that we break both loops if the inner loop is broken out of:
       else:
         continue
-      break      
+      break
+  writer.close() 
               
                 
