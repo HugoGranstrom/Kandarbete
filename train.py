@@ -70,24 +70,22 @@ if __name__ == '__main__':
     vgg = VGG().eval().to(device)
     criterion = lambda real, fake: F.l1_loss(real, fake) + perceptual_loss(real, fake, vgg)
 
+  writer = SummaryWriter(common_parameters.relative_path + 'runs/' + filename.split('.')[0])
+  print("Tensorboard saved at", common_parameters.relative_path + 'runs/' + filename.split('.')[0])
+
+  filename = common_parameters.relative_path + filename
+
   iterations, train_losses, val_losses = loadNet(filename, net, optimizer, device)
   best_loss = min(val_losses) if len(val_losses) > 0 else 1e6
   print("Best validation loss:", best_loss)
   iteration = iterations[-1] if len(iterations) > 0 else -1
 
-  writer = SummaryWriter('runs/' + filename.split('.')[0])
-  print("Tensorboard saved at", 'runs/' + filename.split('.')[0])
-
-  
-  
-
-
   net.train()
   net.to(device)
   
   batch_size = common_parameters.batch_size
-  traindata = FolderSet("train")
-  validdata = FolderSet("valid")
+  traindata = FolderSet(common_parameters.relative_path + "train")
+  validdata = FolderSet(common_parameters.relative_path + "valid")
 
   dataset = DataLoader(traindata, batch_size=batch_size, num_workers = 4)
   validation_dataset = DataLoader(validdata, batch_size=16, num_workers = 4)
