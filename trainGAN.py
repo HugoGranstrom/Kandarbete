@@ -73,6 +73,11 @@ if __name__ == '__main__':
   elif loss_str == "perceptual":
     vgg = VGG().eval().to(device)
     criterion = lambda real, fake: F.l1_loss(real, fake) + perceptual_loss(real, fake, vgg)
+  elif loss_str == "xtra-allt":
+    vgg = VGG().eval().to(device)
+    criterion = lambda real, fake: F.l1_loss(real, fake) + F.l1_loss(sobel_filter(real, device), sobel_filter(fake, device)) + 0.2*perceptual_loss(real, fake, vgg)
+  else:
+    raise RuntimeError(loss_str + " is not a valid loss")
 
   writer = SummaryWriter(common_parameters.relative_path + 'runs/' + filename.split('.')[0])
   filename = common_parameters.relative_path + filename
