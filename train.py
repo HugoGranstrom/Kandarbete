@@ -96,8 +96,8 @@ if __name__ == '__main__':
   #dataset = DataLoader(FolderSet("text"), batch_size=10, num_workers = 7)
 
   print("Datasets loaded")
-  print_every = 100
-  save_every = 500
+  print_every = 10
+  save_every = 50
   i = iteration
 
   for epoch in range(1000):  # loop over the dataset multiple times
@@ -112,7 +112,7 @@ if __name__ == '__main__':
           inputs, real = data
           inputs = inputs.to(device)
           real = real.to(device)
-          
+
           net.zero_grad()
 
           fakes = net(inputs)
@@ -130,11 +130,12 @@ if __name__ == '__main__':
           if i % print_every == 0:
               print('[%d, %5d] loss: %.4f' %
                     (epoch, i, running_loss / print_every))
+              writer.add_scalar("loss/train", running_loss/print_every, i)
               running_loss = 0.0
           if i % save_every == save_every-1:
             train_losses.append(train_loss/save_every)
             iterations.append(i)
-            writer.add_scalar("loss/train", train_loss/save_every, i)
+            #writer.add_scalar("loss/train", train_loss/save_every, i)
             train_loss = 0.0
             saveNet(filename, net, optimizer, iterations, train_losses, val_losses)
             
