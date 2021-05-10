@@ -112,6 +112,8 @@ if __name__ == '__main__':
           inputs, real = data
           inputs = inputs.to(device)
           real = real.to(device)
+          
+          net.zero_grad()
 
           fakes = net(inputs)
 
