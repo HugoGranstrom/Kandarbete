@@ -102,8 +102,8 @@ if __name__ == '__main__':
 
   for epoch in range(1000):  # loop over the dataset multiple times
 
-      running_loss = 0.0
-      train_loss = 0.0
+      running_loss = []
+      train_loss = []
       for data in dataset:
           i += 1
           if i > common_parameters.end_iterations - 1:
@@ -122,21 +122,20 @@ if __name__ == '__main__':
           optimizer.step()
 
           loss_item = loss.item()
-          running_loss += loss_item
-          train_loss += loss_item
+          running_loss.append(loss_item)
+          train_loss.append(loss_item)
 
 
           # print statistics
           if i % print_every == 0:
               print('[%d, %5d] loss: %.4f' %
-                    (epoch, i, running_loss / print_every))
-              writer.add_scalar("loss/train", running_loss/print_every, i)
-              running_loss = 0.0
+                    (epoch, i, sum(running_loss)/len(running_loss)))
+              writer.add_scalar("loss/train", sum(running_loss)/len(running_loss), i)
+              running_loss = []
           if i % save_every == save_every-1:
-            train_losses.append(train_loss/save_every)
+            train_losses.append(sum(train_loss)/len(train_loss))
             iterations.append(i)
-            #writer.add_scalar("loss/train", train_loss/save_every, i)
-            train_loss = 0.0
+            train_loss = []
             saveNet(filename, net, optimizer, iterations, train_losses, val_losses)
             
             with torch.no_grad():
