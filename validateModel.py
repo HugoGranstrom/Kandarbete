@@ -39,7 +39,8 @@ def compat_pad(image, network_depth):
     return padded_im, padding, width, height
 
 if __name__ == '__main__':
-  filename = common_parameters.relative_path + input("Enter model file: ");
+  filename_rw = input("Enter model file: ")
+  filename = common_parameters.relative_path + filename_rw;
 
   device_name = "none"
   if torch.cuda.is_available():
@@ -66,7 +67,7 @@ if __name__ == '__main__':
   sys.stdout.write("[%s]" % (" " * toolbar_width))
   sys.stdout.flush()
   sys.stdout.write("\b" * (toolbar_width+1)) # return to start of line, after '['
-  with open(common_parameters.relative_path + 'validation.csv', 'w', newline='') as file:
+  with open(common_parameters.relative_path + 'validation_' + filename_rw.split(".",1)[0] + '.csv', 'w', newline='') as file:
     wcsv = csv.writer(file)
     wcsv.writerow(["Index", "File", "Model PSNR", "Lanczos PSNR", "Bilinear PSNR"])
     PSNRs = []
