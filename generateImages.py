@@ -44,6 +44,7 @@ if __name__ == '__main__':
     filename = common_parameters.relative_path + filename_raw
     modelname = filename_raw.split(".")[0]
     imgs = ["0807.png", "0869.png"]
+    crops = [(926, 704, 926+256, 704+256), (926, 704, 926+256, 704+256)]
     device_name = "none"
     if torch.cuda.is_available():
       while device_name != 'cuda' and device_name != 'cpu':
@@ -66,7 +67,7 @@ if __name__ == '__main__':
     toTensor = transforms.Compose([transforms.ToTensor()])
     
     for i in range(len(files)):
-      image = Image.open(files[i])
+      image = Image.open(files[i]).crop(crops[i])
       image = image if image.mode == "RGB" else image.convert("RGB")
       real = toTensor(image).unsqueeze(0)
       
