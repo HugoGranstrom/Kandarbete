@@ -49,7 +49,8 @@ class FolderSet(Dataset):
                                               ])
     # Transforms a high-res image to a downscaled low-res image
     this.X_transforms = transforms.Compose([
-                                            RandomDownsampling(low_res_size)
+                                            transforms.Resize(low_res_size, transforms.InterpolationMode.BILINEAR)
+                                            #RandomDownsampling(low_res_size)
                                             ])
     this.toTensor = transforms.Compose([transforms.ToTensor()])
     
