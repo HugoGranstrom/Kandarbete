@@ -85,9 +85,10 @@ if __name__ == '__main__':
       inputs = inputs.to(device)
       real = real.to(device)
       
+      rl_crop = transforms.functional.crop(real.squeeze(), padding[1], padding[0], original_height, original_width)
       with torch.no_grad():
-        y = net(inputs)
-        model_psnr = psnr(real,y).item()
+        y_crop = transforms.functional.crop(net(inputs).squeeze(), padding[1], padding[0], original_height, original_width)
+        model_psnr = psnr(rl_crop,y_crop).item()
         PSNRs.append(model_psnr)
       
       in_crop = transforms.functional.crop(inputs.squeeze(), padding[1]//2, padding[0]//2, original_height//2, original_width//2)
