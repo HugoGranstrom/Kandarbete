@@ -9,30 +9,34 @@ class AdverserialModel(nn.Module):
     super().__init__()
     this.model = nn.Sequential(
       nn.Conv2d(3, 16, 3,padding=1), # 3*3*3*16 = 432
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Conv2d(16, 32, 3,padding=1, stride=2), # 4608
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Conv2d(32, 64, 3,padding=1, stride=2), # 18 432
-      nn.LeakyReLU(0.2, inplace=True),
+      nn.BatchNorm2d(16),
+      nn.LeakyReLU(0.2, inplace=True), # 256
+      nn.Conv2d(16, 32, 3,padding=1,stride=2), # 2
+      nn.BatchNorm2d(32),
+      nn.LeakyReLU(0.2, inplace=True), # 256
+      nn.Conv2d(32, 64, 3,padding=1), # 18 432
+      nn.BatchNorm2d(64),
+      nn.LeakyReLU(0.2, inplace=True), # 128
       nn.Conv2d(64, 128, 3,padding=1, stride=2), # 73 728
-      nn.LeakyReLU(0.2, inplace=True),
+      nn.BatchNorm2d(128),
+      nn.LeakyReLU(0.2, inplace=True), # 64
       nn.Conv2d(128, 256, 3,padding=1, stride=2), # 
-      nn.LeakyReLU(0.2, inplace=True),
+      nn.BatchNorm2d(256),
+      nn.LeakyReLU(0.2, inplace=True), # 32
       nn.Conv2d(256, 512, 3,padding=1, stride=2), # 
-      nn.LeakyReLU(0.2, inplace=True),
+      nn.BatchNorm2d(512),
+      nn.LeakyReLU(0.2, inplace=True), # 16
       nn.Conv2d(512, 1024, 3,padding=1, stride=2), #
-      nn.LeakyReLU(0.2, inplace=True),
+      nn.BatchNorm2d(1024),
+      nn.LeakyReLU(0.2, inplace=True), # 8
       nn.Conv2d(1024, 2048, 3,padding=1, stride=2), #
-      nn.LeakyReLU(0.2, inplace=True),
-      
+      nn.BatchNorm2d(2048),
+      nn.LeakyReLU(0.2, inplace=True), # 4
+      nn.AdaptiveAvgPool2d(2),
       
       nn.Flatten(),
       
-      nn.Linear(int(2048*high_res*high_res/(4**7)), 1024), # 8 388 608
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Linear(1024, 1024),
-      nn.LeakyReLU(0.2, inplace=True),
-      nn.Linear(1024, 128),
+      nn.Linear(2048 * 2**2, 128), 
       nn.LeakyReLU(0.2, inplace=True),
       nn.Linear(128, 1)
     )

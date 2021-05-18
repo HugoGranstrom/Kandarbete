@@ -30,7 +30,7 @@ import random
 from dataset import *
 from hqset import *
 from net import *
-from unet import *
+from unetDeep import *
 from test import predict
 
 from collections import namedtuple
@@ -46,8 +46,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 if __name__ == '__main__':
   torch.multiprocessing.freeze_support()
-
-  torch.manual_seed(1337)
     
   print('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -99,7 +97,7 @@ if __name__ == '__main__':
   validdata = FolderSet(common_parameters.relative_path + "valid")
 
   dataset = DataLoader(traindata, batch_size=batch_size, num_workers = 4)
-  validation_dataset = DataLoader(validdata, batch_size=16, num_workers = 4)
+  validation_dataset = DataLoader(validdata, batch_size=batch_size*2)
   
   validation_data = [i for i in validation_dataset]
   validation_size = len(validation_data)
@@ -108,8 +106,23 @@ if __name__ == '__main__':
   
   print("Datasets loaded")
   print_every = 50
-  save_every = 500
+  save_every = 200
   i = iteration
+  
+  toTensor = transforms.Compose([transforms.ToTensor()])
+  lanz_PSNRs = []
+  img_i = 0
+  for inputs, labels in validation_data:
+    for j in range(len(inputs)):
+      writer.add_image("Validation-set image", labels[j,...],img_i)
+      img_i += 1
+      input =  transforms.ToPILImage()(inputs[j,...])
+      label = labels[j,...]
+      y_lanz = toTensor(transforms.Resize((256,256), transforms.InterpolationMode.LANCZOS)(input))
+      lanz_PSNRs.append(psnr(label,y_lanz).item())
+  
+  lanz_PSNR = sum(lanz_PSNRs)/len(lanz_PSNRs)
+  print("Lanczos benchmark over validationset: ", lanz_PSNR)
   
   speed_mini = read_image("speed-mini.png", mode=ImageReadMode.RGB).to(device).float() / 255.0
   
@@ -169,12 +182,9 @@ if __name__ == '__main__':
             writer.add_scalar("loss/train", sum(running_loss)/len(running_loss), i)
             writer.add_scalar("loss/train_generator", sum(running_lossG)/len(running_lossG), i)
             writer.add_scalar("loss/train_discriminator", sum(running_lossD)/len(running_lossD), i)
-            with torch.no_grad():
-              net.eval()
-              writer.add_image("train image", net(speed_mini.unsqueeze(0)).squeeze(), i)
             net.train()
             running_lossD, running_lossG, running_loss = [],[],[]
-          if i % save_every == save_every-1:
+          if i % save_every == 0:
             train_losses.append(train_loss/save_every)
             iterations.append(i)
             train_loss = 0.0
@@ -183,11 +193,15 @@ if __name__ == '__main__':
               net.eval()
               criterion_loss = 0.0
               psnr_score = 0
+              psnrs = []
               for inputs, labels in validation_data:
                 inputs = inputs.to(device)
                 real_val = labels.to(device)
                 fakes_val = net(inputs)
                 criterion_loss += criterion(real_val, fakes_val).item()
+                for j in range(len(inputs)):
+                  input =  transforms.ToPILImage()(inputs[j,...])
+                  label = labels[j,...]
                 psnr_score += psnr(real_val, fakes_val).item()
                 
               criterion_loss /= validation_size
@@ -195,6 +209,7 @@ if __name__ == '__main__':
               validation_loss = criterion_loss
               val_losses.append(validation_loss)
               writer.add_scalar("loss/valid", validation_loss, i)
+              writer.add_scalar("psnr/lanczos", lanz_PSNR, i)
               writer.add_scalar("psnr/valid", psnr_score, i)
 
               writer.add_image("validation image", net(speed_mini.unsqueeze(0)).squeeze(), i)

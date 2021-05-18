@@ -121,12 +121,3 @@ class UNet(nn.Module):
     encoder_features = self.encoder(x)
     out = self.decoder(encoder_features[::-1][0], encoder_features[::-1][1:])
     return out
-
-from torchsummary import summary
-
-if __name__ == "__main__":
-  x = torch.randn(4, 3, 64, 96)
-  net = UNet(depth=4, scale_power=3, n_blocks=0)
-  summary(net, (3, 192, 256), batch_size=5)
-  y = net(x)
-  print(y.shape)
