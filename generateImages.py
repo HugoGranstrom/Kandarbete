@@ -43,8 +43,8 @@ if __name__ == '__main__':
   for filename_raw in filenames:
     filename = common_parameters.relative_path + filename_raw
     modelname = filename_raw.split(".")[0]
-    imgs = ["0807.png", "0869.png"]
-    crops = [(926, 704, 926+256, 704+256), (926, 704, 926+256, 704+256)]
+    imgs = ["0807.png", "0869.png", "0898.png", "0839.png", "0885.png"]
+    crops = [(926, 704, 926+256, 704+256), (926, 704, 926+256, 704+256), (1600,600,1600+256, 600+256), (750,130,750+256, 130+256), (1550,350,1550+256, 350+256)]
     device_name = "none"
     if torch.cuda.is_available():
       while device_name != 'cuda' and device_name != 'cpu':
