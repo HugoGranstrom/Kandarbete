@@ -98,7 +98,7 @@ if __name__ == '__main__':
         os.mkdir(save_dir)
       y_lanz.save(save_dir + "lanczos.png")
       y_bicub.save(save_dir + "bicubic.png")
-      y_net.save(save_dir + "original.png")
+      y_net.save(save_dir + modelname + ".png")
       image.save(save_dir + imgs[i])
       resized_im.save(save_dir + "downsampled.png")
 
