@@ -119,3 +119,64 @@ def sobel_filter(y, device):
 
 def psnr(real, fake):
   return -10*torch.log10(F.mse_loss(real, fake))
+
+# Copyright (c) 2013 Anders Hast
+# Uppsala University
+# http://www.cb.uu.se/~aht
+# 
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in 
+# all copies or substantial portions of the Software.
+#
+# The Software is provided "as is", without warranty of any kind.
+#
+
+def kernel(spline): 
+  if spline == 'Cubic':
+      #B  = [-1,1,-1,1;0,0,0,1;1,1,1,1;8,4,2,1];
+      #M  = inv(B);
+      M = torch.tensor([[-1,3,-3,1], [3,-6,3,0], [-2,-3,6,-1], [0,6,0,0]])*1/6
+      u  = torch.tensor([[0.125], [0.25], [0.5], [1]])
+      up = torch.tensor([0.75,1,1,0]).view(-1, 1)
+      upp= torch.tensor([3,2,0,0]).view(-1, 1)
+  elif spline == 'Catmull-Rom': #
+      M = torch.tensor([[-1,3,-3,1], [2,-5,4,-1], [-1,0,1,0], [0,2,0,0]])*0.5
+      u  = torch.tensor([0.125, 0.25, 0.5, 1]).view(-1, 1)
+      up = torch.tensor([0.75,1,1,0]).view(-1, 1)
+      upp= torch.tensor([3, 2, 0, 0]).view(-1, 1)
+  elif spline == 'Trigonometric':
+      M  = [[1,1,0,1], [1,torch.sqrt(3/4),0.5,0.5], [1,0.5,torch.sqrt(3/4),-0.5], [1,0,1,-1]]
+      M  = torch.inverse(M)
+      u  = [1,torch.sqrt(1/2),torch.sqrt(1/2),0].view(-1, 1)
+      up = [0,-torch.sqrt(1/2),torch.sqrt(1/2),-2].view(-1, 1)
+      upp= [0,-torch.sqrt(1/2),-torch.sqrt(1/2),0].view(-1, 1)
+  else:
+      raise ValueError('Spline unknown!')
+  """ elif spline == 'Bezier':
+      M=[1,0,0,0;-3,3,0,0;3, -6,3,0; -1,3,-3,1]';
+      u  = [0.125;0.25;0.5;1];
+      up = [0.75;1;1;0];
+      upp= [3;2;0;0];
+  elif spline == 'B-Spline':
+      M=[-1,3,-3,1;3,-6,3,0;-3,0,3,0;1,4,1,0]*1/6;
+      u  = [0.125;0.25;0.5;1];
+      up = [0.75;1;1;0];
+      upp= [3;2;0;0]; """
+  
+  k  = torch.mm(u.T, M)
+  d  = torch.mm(up.T, M)
+  d2  = torch.mm(upp.T, M)
+  return (k, d, d2)
+
+def superHast(y, device):
+  dk = torch.tensor([-0.006127921758831, 0.196582449765983, -1.328234947353380, -0.000000000000001, 1.328234947353381, -0.196582449765985, 0.006127921758831]).view(1, -1)
+  kk = torch.tensor([0.004333095030250, -0.074492438854197, 0.245666904969751, 0.648984877708396, 0.245666904969750, -0.074492438854198, 0.004333095030250]).view(1, -1)
+  a = torch.matmul(dk.T, kk).view(1,1,7,7).expand(3,-1,-1,-1).float().to(device)
+  b = torch.matmul(kk.T, dk).view(1,1,7,7).expand(3,-1,-1,-1).float().to(device)
+  Hx = F.conv2d(y, a, groups=y.shape[1])
+  Hy = F.conv2d(y, b, groups=y.shape[1])
+  return (Hx**2 + Hy**2 + 1e-8).sqrt()

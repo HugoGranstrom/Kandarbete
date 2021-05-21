@@ -69,6 +69,8 @@ if __name__ == '__main__':
   elif loss_str == "perceptual":
     vgg = VGG().eval().to(device)
     criterion = lambda real, fake: F.l1_loss(real, fake) + perceptual_loss(real, fake, vgg)
+  elif loss_str == "hast":
+    criterion = lambda real, fake: F.l1_loss(real, fake) + F.l1_loss(superHast(real, device), superHast(fake, device))
 
   writer = SummaryWriter(common_parameters.relative_path + 'runs/' + filename.split('.')[0])
   print("Tensorboard saved at", common_parameters.relative_path + 'runs/' + filename.split('.')[0])
