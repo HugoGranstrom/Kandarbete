@@ -25,7 +25,7 @@ if __name__ == '__main__':
   foldername = input("Name of the folder (eg 0807): ")
   print("# files: ", len(files), "# slots: ", rows*columns)
   fig = plt.figure(figsize=(10, 8))
-  plt.title("Comparasion of models", y=1.08)
+  plt.title("Comparison of models", y=1.08)
   plt.axis("off")
   for i, (filename, title) in enumerate(files):
     im = Image.open("Images/" + foldername + "/" + filename + ".png").convert("RGB")

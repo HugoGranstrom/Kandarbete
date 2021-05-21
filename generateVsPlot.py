@@ -33,7 +33,7 @@ if __name__ == '__main__':
     title1 = filePair[0][1]
     title2 = filePair[1][1]
     fig = plt.figure(figsize=(10, 10))
-    plt.title("Comparasion of models", y=1.08)
+    plt.title("Comparison of models", y=1.08)
     plt.axis("off")
     fig.add_subplot(rows, columns, 1)
     plt.imshow(original_im)
