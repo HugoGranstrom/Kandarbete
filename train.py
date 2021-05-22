@@ -41,7 +41,7 @@ from torchvision import models
 from torchvision.io.image import read_image, ImageReadMode
 
 import common_parameters
-from losses import VGG, perceptual_loss, sobel_filter, psnr
+from losses import VGG, perceptual_loss, sobel_filter, psnr, superHast, catmullHast
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -70,7 +70,9 @@ if __name__ == '__main__':
     vgg = VGG().eval().to(device)
     criterion = lambda real, fake: F.l1_loss(real, fake) + perceptual_loss(real, fake, vgg)
   elif loss_str == "hast":
-    criterion = lambda real, fake: F.l1_loss(real, fake) + F.l1_loss(superHast(real, device), superHast(fake, device))
+    criterion = lambda real, fake: F.l1_loss(real, fake) + 2*F.l1_loss(superHast(real, device), superHast(fake, device))
+  elif loss_str == "hastCatmull":
+    criterion = lambda real, fake: F.l1_loss(real, fake) + 4*F.l1_loss(catmullHast(real, device), catmullHast(fake, device))
 
   writer = SummaryWriter(common_parameters.relative_path + 'runs/' + filename.split('.')[0])
   print("Tensorboard saved at", common_parameters.relative_path + 'runs/' + filename.split('.')[0])

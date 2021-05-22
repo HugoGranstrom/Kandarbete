@@ -40,7 +40,7 @@ from torchvision import models
 from torchvision.io.image import read_image, ImageReadMode
 
 import common_parameters
-from losses import VGG, perceptual_loss, sobel_filter, psnr, AdverserialModel
+from losses import VGG, perceptual_loss, sobel_filter, psnr, AdverserialModel, superHast, catmullHast
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -74,6 +74,10 @@ if __name__ == '__main__':
   elif loss_str == "xtra-allt":
     vgg = VGG().eval().to(device)
     criterion = lambda real, fake: F.l1_loss(real, fake) + F.l1_loss(sobel_filter(real, device), sobel_filter(fake, device)) + 0.2*perceptual_loss(real, fake, vgg)
+  elif loss_str == "hast":
+    criterion = lambda real, fake: F.l1_loss(real, fake) + 2*F.l1_loss(superHast(real, device), superHast(fake, device))
+  elif loss_str == "hastCatmull":
+    criterion = lambda real, fake: F.l1_loss(real, fake) + 4*F.l1_loss(catmullHast(real, device), catmullHast(fake, device))
   else:
     raise RuntimeError(loss_str + " is not a valid loss")
 

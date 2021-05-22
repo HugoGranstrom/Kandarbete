@@ -173,10 +173,21 @@ def kernel(spline):
   return (k, d, d2)
 
 def superHast(y, device):
+  # Trigonometric
   dk = torch.tensor([-0.006127921758831, 0.196582449765983, -1.328234947353380, -0.000000000000001, 1.328234947353381, -0.196582449765985, 0.006127921758831]).view(1, -1)
   kk = torch.tensor([0.004333095030250, -0.074492438854197, 0.245666904969751, 0.648984877708396, 0.245666904969750, -0.074492438854198, 0.004333095030250]).view(1, -1)
   a = torch.matmul(dk.T, kk).view(1,1,7,7).expand(3,-1,-1,-1).float().to(device)
   b = torch.matmul(kk.T, dk).view(1,1,7,7).expand(3,-1,-1,-1).float().to(device)
   Hx = F.conv2d(y, a, groups=y.shape[1])
   Hy = F.conv2d(y, b, groups=y.shape[1])
-  return (Hx**2 + Hy**2 + 1e-8).sqrt()
+  return (Hx**2 + Hy**2 + 1e-12).sqrt()
+
+def catmullHast(y, device):
+  # Catmull-Rom
+  dk = torch.tensor([-0.0078125, 0.15625, -0.7890625, 0, 0.7890625, -0.15625, 0.0078125]).view(1, -1)
+  kk = torch.tensor([0.00390625, -0.0703125, 0.24609375, 0.640625, 0.24609375, -0.0703125, 0.00390625]).view(1, -1)
+  a = torch.matmul(dk.T, kk).view(1,1,7,7).expand(3,-1,-1,-1).float().to(device)
+  b = torch.matmul(kk.T, dk).view(1,1,7,7).expand(3,-1,-1,-1).float().to(device)
+  Hx = F.conv2d(y, a, groups=y.shape[1])
+  Hy = F.conv2d(y, b, groups=y.shape[1])
+  return (Hx**2 + Hy**2 + 1e-12).sqrt()
