@@ -84,6 +84,8 @@ if __name__ == '__main__':
   print("Best validation loss:", best_loss)
   iteration = iterations[-1] if len(iterations) > 0 else -1
 
+  #scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=4e-4, total_steps=common_parameters.end_iterations, cycle_momentum=False, last_epoch=iteration, div_factor=5, final_div_factor=1e1)
+
   net.train()
   net.to(device)
   
@@ -124,7 +126,7 @@ if __name__ == '__main__':
           loss = criterion(real, fakes)
           loss.backward()
           optimizer.step()
-
+          #scheduler.step()
           loss_item = loss.item()
           running_loss.append(loss_item)
           train_loss.append(loss_item)
@@ -165,7 +167,7 @@ if __name__ == '__main__':
               
 
               
-              print("Validation loss:", validation_loss, "Mean PSNR:", psnr_score)
+              print("Validation loss:", validation_loss, "Mean PSNR:", psnr_score)#, "lr:", scheduler.get_last_lr())
               net.train()
               if validation_loss < best_loss:
                 saveNet(filename + "_best", net, optimizer, iterations, train_losses, val_losses)
