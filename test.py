@@ -3,6 +3,7 @@ from PIL import Image
 from torchvision import transforms
 from net import *
 from unet import *
+import common_parameters
 
 def compat_pad(image, network_depth):
   n = 2**network_depth
@@ -66,7 +67,7 @@ if __name__ == '__main__':
     factor = int(factor_s)
     print("=",2**factor)
   
-  net = UNet(depth=5)
+  net = UNet(depth=5, scale_power=common_parameters.scale_power)
   loadNetEval(filename, net, device)
   net.to(device)
   net.eval()

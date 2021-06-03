@@ -50,7 +50,8 @@ if __name__ == '__main__':
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-  net = UNet(depth=5).to(device)
+  scale_power = common_parameters.scale_power
+  net = UNet(depth=5, scale_power=scale_power).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=common_parameters.learning_rate)
   
   disc = AdverserialModel(256).to(device)
@@ -97,7 +98,6 @@ if __name__ == '__main__':
   batch_size = common_parameters.batch_size
 
   high_res = (256, 256)
-  scale_power = 1
   low_res = (high_res[0] // 2**scale_power, high_res[1] // 2**scale_power)
 
   traindata = FolderSet(common_parameters.relative_path + "train", high_res_size=high_res, low_res_size=low_res, center=False)
