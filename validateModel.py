@@ -61,7 +61,7 @@ if __name__ == '__main__':
   net.eval()
   
   files = glob.glob(common_parameters.relative_path + "valid/*.png")
-  toolbar_width = len(files)
+  toolbar_width = len(files)//2
   
   # setup toolbar
   sys.stdout.write("[%s]" % (" " * toolbar_width))
@@ -69,7 +69,7 @@ if __name__ == '__main__':
   sys.stdout.write("\b" * (toolbar_width+1)) # return to start of line, after '['
   with open(common_parameters.relative_path + 'validation_' + filename_rw.split(".",1)[0] + '.csv', 'w', newline='') as file:
     wcsv = csv.writer(file)
-    wcsv.writerow(["Index", "File", "Model PSNR", "Lanczos PSNR", "Bilinear PSNR"])
+    wcsv.writerow(["Index", "File", "Model PSNR", "Lanczos PSNR", "Bilinear PSNR", "Bicubic PSNR"])
     PSNRs = []
     toTensor = transforms.Compose([transforms.ToTensor()])
     
@@ -97,12 +97,15 @@ if __name__ == '__main__':
       rz_size = (im2.size[1]*2, im2.size[0]*2)
       y_lanz = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.LANCZOS)(im2)).to(device)
       y_blin = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.BILINEAR)(im2)).to(device)
+      y_bcub = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.BICUBIC)(im2)).to(device)
       lanz_psnr = psnr(rl_crop,y_lanz).item()
       blin_psnr = psnr(rl_crop,y_blin).item()
+      bcub_psnr = psnr(rl_crop,y_bcub).item()
       
-      wcsv.writerow([i, files[i], model_psnr, lanz_psnr, blin_psnr])
-      sys.stdout.write("#")
-      sys.stdout.flush()
+      wcsv.writerow([i, files[i], model_psnr, lanz_psnr, blin_psnr, bcub_psnr])
+      if i % 2 == 1:
+        sys.stdout.write("#")
+        sys.stdout.flush()
 
   sys.stdout.write("]\n") # this ends the progress bar
   print(PSNRs)
