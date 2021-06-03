@@ -27,7 +27,6 @@ import pandas as pd
 
 import random
 
-from dataset import *
 from hqset import *
 from net import *
 from unet import *
@@ -40,7 +39,7 @@ from torchvision import models
 from torchvision.io.image import read_image, ImageReadMode
 
 import common_parameters
-from losses import VGG, perceptual_loss, sobel_filter, psnr, AdverserialModel, superHast, catmullHast
+from losses import VGG, perceptual_loss, sobel_filter, psnr, AdverserialModel, trigHast, catmullHast
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -74,8 +73,8 @@ if __name__ == '__main__':
   elif loss_str == "xtra-allt":
     vgg = VGG().eval().to(device)
     criterion = lambda real, fake: F.l1_loss(real, fake) + F.l1_loss(sobel_filter(real, device), sobel_filter(fake, device)) + 0.2*perceptual_loss(real, fake, vgg)
-  elif loss_str == "hast":
-    criterion = lambda real, fake: F.l1_loss(real, fake) + 2*F.l1_loss(superHast(real, device), superHast(fake, device))
+  elif loss_str == "hastTrig":
+    criterion = lambda real, fake: F.l1_loss(real, fake) + 2*F.l1_loss(trigHast(real, device), trigHast(fake, device))
   elif loss_str == "hastCatmull":
     criterion = lambda real, fake: F.l1_loss(real, fake) + 4*F.l1_loss(catmullHast(real, device), catmullHast(fake, device))
   else:
@@ -97,8 +96,12 @@ if __name__ == '__main__':
 
   batch_size = common_parameters.batch_size
 
-  traindata = FolderSet(common_parameters.relative_path + "train")
-  validdata = FolderSet(common_parameters.relative_path + "valid")
+  high_res = (256, 256)
+  scale_power = 1
+  low_res = (high_res[0] // 2**scale_power, high_res[1] // 2**scale_power)
+
+  traindata = FolderSet(common_parameters.relative_path + "train", high_res_size=high_res, low_res_size=low_res, center=False)
+  validdata = FolderSet(common_parameters.relative_path + "valid", high_res_size=high_res, low_res_size=low_res, center=True)
 
   dataset = DataLoader(traindata, batch_size=batch_size, num_workers = 4)
   validation_dataset = DataLoader(validdata, batch_size=batch_size*2)
@@ -109,8 +112,8 @@ if __name__ == '__main__':
   #dataset = DataLoader(FolderSet("text"), batch_size=10, num_workers = 7)
   
   print("Datasets loaded")
-  print_every = 50
-  save_every = 200
+  print_every = 100
+  save_every = 500
   i = iteration
   
   speed_mini = read_image("speed-mini.png", mode=ImageReadMode.RGB).to(device).float() / 255.0

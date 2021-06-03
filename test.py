@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
-from dataset import *
+from PIL import Image
+from torchvision import transforms
 from net import *
 from unet import *
 
@@ -43,8 +44,7 @@ if __name__ == '__main__':
   filename = input("Enter model file: ");
   imf = input("Enter image file: ")
   if imf == "":
-    OpenDataset([],1).download_image("0a2cc77c7437e2fb")
-    imf = "imgs/0a2cc77c7437e2fb.jpg"
+    raise ValueError("No image was given!")
     
 
   device_name = "none"
@@ -68,7 +68,6 @@ if __name__ == '__main__':
   
   net = UNet(depth=5)
   loadNetEval(filename, net, device)
-  #loadNetEval("/content/drive/MyDrive/Colab Notebooks/" + filename, net, device)
   net.to(device)
   net.eval()
   
@@ -76,9 +75,7 @@ if __name__ == '__main__':
   plt.imshow(x)
   plt.show(block=False)
   plt.pause(0.05)
-  
-  #y = net(transforms.ToTensor()(x).unsqueeze(0).to(device))
-  #im = transforms.ToPILImage()(y.squeeze())
+
   im = predict(x, net, device)
   for i in range(factor-1):
     im = predict(im,net,device)

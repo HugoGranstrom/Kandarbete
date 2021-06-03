@@ -39,10 +39,13 @@ class RandomDownsampling:
         return transforms.functional.resize(x, self.low_res_size, mode)
 
 class FolderSet(Dataset):
-  def __init__(this, root_dir, high_res_size = (256, 256), low_res_size = (128, 128)):
+  def __init__(this, root_dir, high_res_size = (256, 256), low_res_size = (128, 128), center=False):
     this.high_res_size = high_res_size
     this.low_res_size = low_res_size
-    this.crop_transform = transforms.Compose([
+    if center:
+      this.crop_transform = transforms.CenterCrop(high_res_size)
+    else:
+      this.crop_transform = transforms.Compose([
                                               transforms.RandomCrop(high_res_size, padding=None, pad_if_needed=True),
                                               transforms.RandomHorizontalFlip(),
                                               NinetiesRotation()

@@ -28,7 +28,6 @@ import pandas as pd
 
 import random
 
-from dataset import *
 from hqset import *
 from net import *
 from unet import *
@@ -41,7 +40,7 @@ from torchvision import models
 from torchvision.io.image import read_image, ImageReadMode
 
 import common_parameters
-from losses import VGG, perceptual_loss, sobel_filter, psnr, superHast, catmullHast
+from losses import VGG, perceptual_loss, sobel_filter, psnr, trigHast, catmullHast
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -69,8 +68,8 @@ if __name__ == '__main__':
   elif loss_str == "perceptual":
     vgg = VGG().eval().to(device)
     criterion = lambda real, fake: F.l1_loss(real, fake) + perceptual_loss(real, fake, vgg)
-  elif loss_str == "hast":
-    criterion = lambda real, fake: F.l1_loss(real, fake) + 2*F.l1_loss(superHast(real, device), superHast(fake, device))
+  elif loss_str == "hastTrig":
+    criterion = lambda real, fake: F.l1_loss(real, fake) + 2*F.l1_loss(trigHast(real, device), trigHast(fake, device))
   elif loss_str == "hastCatmull":
     criterion = lambda real, fake: F.l1_loss(real, fake) + 4*F.l1_loss(catmullHast(real, device), catmullHast(fake, device))
 
@@ -84,26 +83,29 @@ if __name__ == '__main__':
   print("Best validation loss:", best_loss)
   iteration = iterations[-1] if len(iterations) > 0 else -1
 
-  #scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=4e-4, total_steps=common_parameters.end_iterations, cycle_momentum=False, last_epoch=iteration, div_factor=5, final_div_factor=1e1)
+  #scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=3e-4, total_steps=common_parameters.end_iterations, cycle_momentum=False, last_epoch=iteration, div_factor=5, final_div_factor=1e1)
 
   net.train()
   net.to(device)
   
   batch_size = common_parameters.batch_size
-  traindata = FolderSet(common_parameters.relative_path + "train")
-  validdata = FolderSet(common_parameters.relative_path + "valid")
+
+  high_res = (256, 256)
+  scale_power = 1
+  low_res = (high_res[0] // 2**scale_power, high_res[1] // 2**scale_power)
+
+  traindata = FolderSet(common_parameters.relative_path + "train", high_res_size=high_res, low_res_size=low_res, center=False)
+  validdata = FolderSet(common_parameters.relative_path + "valid", high_res_size=high_res, low_res_size=low_res, center=True)
 
   dataset = DataLoader(traindata, batch_size=batch_size, num_workers = 4)
   validation_dataset = DataLoader(validdata, batch_size=16, num_workers = 4)
   
   validation_data = [i for i in validation_dataset]
   validation_size = len(validation_data)
-  
-  #dataset = DataLoader(FolderSet("text"), batch_size=10, num_workers = 7)
 
   print("Datasets loaded")
-  print_every = 10
-  save_every = 50
+  print_every = 100
+  save_every = 500
   i = iteration
 
   for epoch in range(1000):  # loop over the dataset multiple times
