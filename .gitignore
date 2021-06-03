@@ -12,6 +12,7 @@ _net_UNet_v2.pt
 net_UNet_v2.pt_best
 *.png
 *.jpg
+*.svg
 *.pt
 *.pt_best
 *.csv
