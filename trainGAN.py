@@ -30,7 +30,7 @@ import random
 from dataset import *
 from hqset import *
 from net import *
-from unetDeep import *
+from unet import *
 from test import predict
 
 from collections import namedtuple
@@ -113,21 +113,6 @@ if __name__ == '__main__':
   save_every = 200
   i = iteration
   
-  toTensor = transforms.Compose([transforms.ToTensor()])
-  lanz_PSNRs = []
-  img_i = 0
-  for inputs, labels in validation_data:
-    for j in range(len(inputs)):
-      writer.add_image("Validation-set image", labels[j,...],img_i)
-      img_i += 1
-      input =  transforms.ToPILImage()(inputs[j,...])
-      label = labels[j,...]
-      y_lanz = toTensor(transforms.Resize((256,256), transforms.InterpolationMode.LANCZOS)(input))
-      lanz_PSNRs.append(psnr(label,y_lanz).item())
-  
-  lanz_PSNR = sum(lanz_PSNRs)/len(lanz_PSNRs)
-  print("Lanczos benchmark over validationset: ", lanz_PSNR)
-  
   speed_mini = read_image("speed-mini.png", mode=ImageReadMode.RGB).to(device).float() / 255.0
   
   for epoch in range(1000):  # loop over the dataset multiple times
@@ -183,9 +168,9 @@ if __name__ == '__main__':
                   (epoch, i, sum(running_lossG)/len(running_lossG)))
             print('[%d, %5d] lossD: %.4f' %
                   (epoch, i, sum(running_lossD)/len(running_lossD)))
-            writer.add_scalar("loss/train", sum(running_loss)/len(running_loss), i)
-            writer.add_scalar("loss/train_generator", sum(running_lossG)/len(running_lossG), i)
-            writer.add_scalar("loss/train_discriminator", sum(running_lossD)/len(running_lossD), i)
+            writer.add_scalar("train/loss", sum(running_loss)/len(running_loss), i)
+            writer.add_scalar("train/loss_generator", sum(running_lossG)/len(running_lossG), i)
+            writer.add_scalar("train/loss_discriminator", sum(running_lossD)/len(running_lossD), i)
             net.train()
             running_lossD, running_lossG, running_loss = [],[],[]
           if i % save_every == 0:
@@ -212,9 +197,8 @@ if __name__ == '__main__':
               psnr_score /= validation_size
               validation_loss = criterion_loss
               val_losses.append(validation_loss)
-              writer.add_scalar("loss/valid", validation_loss, i)
-              writer.add_scalar("psnr/lanczos", lanz_PSNR, i)
-              writer.add_scalar("psnr/valid", psnr_score, i)
+              writer.add_scalar("valid/loss", validation_loss, i)
+              writer.add_scalar("valid/PSNR", psnr_score, i)
 
               writer.add_image("validation image", net(speed_mini.unsqueeze(0)).squeeze(), i)
               

@@ -3,32 +3,6 @@ import torch.nn.functional as F
 import os
 import torch
 
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 15, stride=1, padding=7, dilation=1, groups=1, bias=True, padding_mode='zeros')
-        self.conv2 = nn.Conv2d(32, 64, 5, stride=1, padding=2, dilation=1, groups=1, bias=True, padding_mode='zeros')
-        self.conv3 = nn.Conv2d(64, 128, 5, stride=1, padding=2, dilation=1, groups=1, bias=True, padding_mode='zeros')
-        self.conv4 = nn.Conv2d(128, 256, 5, stride=1, padding=2, dilation=1, groups=1, bias=True, padding_mode='zeros')
-        self.pixelShuffle = nn.PixelShuffle(2)
-        self.conv5 = nn.Conv2d(64, 16, 7, stride=1, padding=3, dilation=1, groups=1, bias=True, padding_mode='zeros')
-        self.conv6 = nn.Conv2d(16, 3, 3, stride=1, padding=1, dilation=1, groups=1, bias=True, padding_mode='zeros')
-				
-        self.leaky = nn.LeakyReLU()
-
-    def forward(self, x):
-        x = self.leaky(self.conv1(x))
-        x = self.leaky(self.conv2(x))
-        x = self.leaky(self.conv3(x))
-        x = self.leaky(self.conv4(x))
-        x = self.leaky(self.pixelShuffle(x))
-        x = self.leaky(self.conv5(x))
-        x = 4*torch.tanh(self.conv6(x))
-        
-        return x
-
-
-
 def saveNetGAN(filename, generator, optimizer_gen, discriminator, optimizer_disc, iterations, train_loss, val_loss):
   torch.save({
       "gen": generator.state_dict(),

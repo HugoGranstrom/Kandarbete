@@ -49,6 +49,7 @@ class FolderSet(Dataset):
                                               ])
     # Transforms a high-res image to a downscaled low-res image
     this.X_transforms = transforms.Compose([
+                                            #transforms.GaussianBlur(3), #Simulate camera point
                                             transforms.Resize(low_res_size, transforms.InterpolationMode.BILINEAR)
                                             #RandomDownsampling(low_res_size)
                                             ])
