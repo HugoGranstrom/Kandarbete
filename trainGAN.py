@@ -103,7 +103,7 @@ if __name__ == '__main__':
   traindata = FolderSet(common_parameters.relative_path + "train", high_res_size=high_res, low_res_size=low_res, center=False)
   validdata = FolderSet(common_parameters.relative_path + "valid", high_res_size=high_res, low_res_size=low_res, center=True)
 
-  dataset = DataLoader(traindata, batch_size=batch_size, num_workers = 4)
+  dataset = DataLoader(traindata, batch_size=batch_size, num_workers = 4, shuffle=True)
   validation_dataset = DataLoader(validdata, batch_size=batch_size*2)
   
   validation_data = [i for i in validation_dataset]
