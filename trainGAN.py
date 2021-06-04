@@ -103,8 +103,8 @@ if __name__ == '__main__':
   traindata = FolderSet(common_parameters.relative_path + "train", high_res_size=high_res, low_res_size=low_res, center=False)
   validdata = FolderSet(common_parameters.relative_path + "valid", high_res_size=high_res, low_res_size=low_res, center=True)
 
-  dataset = DataLoader(traindata, batch_size=batch_size, num_workers = 4, shuffle=True)
-  validation_dataset = DataLoader(validdata, batch_size=batch_size*2)
+  dataset = DataLoader(traindata, batch_size=batch_size, num_workers = common_parameters.num_workers, shuffle=True)
+  validation_dataset = DataLoader(validdata, batch_size=batch_size*2, num_workers = common_parameters.num_workers)
   
   validation_data = [i for i in validation_dataset]
   validation_size = len(validation_data)
@@ -112,13 +112,13 @@ if __name__ == '__main__':
   #dataset = DataLoader(FolderSet("text"), batch_size=10, num_workers = 7)
   
   print("Datasets loaded")
-  print_every = 100
-  save_every = 500
+  print_every = common_parameters.print_every
+  save_every = common_parameters.save_every
   i = iteration
   
   speed_mini = read_image("speed-mini.png", mode=ImageReadMode.RGB).to(device).float() / 255.0
   
-  for epoch in range(1000):  # loop over the dataset multiple times
+  for epoch in range(10000):  # loop over the dataset multiple times
 
       running_lossD, running_lossG, running_loss = [],[],[]
       train_loss = 0.0
