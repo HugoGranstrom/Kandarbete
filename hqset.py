@@ -59,7 +59,8 @@ class FolderSet(Dataset):
     this.toTensor = transforms.Compose([transforms.ToTensor()])
     
     this.files = glob.glob(f"{root_dir}/*.png")
-    random.shuffle(this.files)
+    if not center:
+      random.shuffle(this.files)
     this.length = len(this.files)
       
   def __len__(this):

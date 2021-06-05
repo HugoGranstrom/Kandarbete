@@ -29,7 +29,8 @@ class Encoder(nn.Module):
     super().__init__()
     self.nchannels = nchannels
     self.pool = nn.MaxPool2d(2)
-    self.blocks = nn.ModuleList([CnnBlock(nchannels[i], nchannels[i+1]) for i in range(len(nchannels)-1)])
+    self.blocks = nn.ModuleList([CnnBlock(nchannels[i], nchannels[i+1]) for i in range(len(nchannels)-2)])
+    self.blocks.append(CnnBlock(nchannels[-2], nchannels[-1]))
 
   def forward(self, x):
     features = []
@@ -62,7 +63,7 @@ class Decoder(nn.Module):
     self.blocks = nn.ModuleList([CnnBlock(nchannels[i], nchannels[i+1]) for i in range(len(nchannels)-1)])
     self.finalBlocks = nn.Sequential(
       *[UpscaleBlock(nchannels[-1], nchannels[-1]) for i in range(scale_power)],
-      nn.Sequential(nn.Conv2d(nchannels[-1], nchannels[-1], 3, padding=1), nn.LeakyReLU(negative_slope=0.2, inplace=True), nn.Conv2d(nchannels[-1], 3, 3, padding=1), nn.Sigmoid())
+      nn.Sequential(nn.Conv2d(nchannels[-1], nchannels[-1], 3, padding=1), nn.LeakyReLU(negative_slope=0.2, inplace=True), nn.Conv2d(nchannels[-1], 3, 3, padding=1))
     )
 
   def forward(self, x, encoder_features):

@@ -88,6 +88,7 @@ if __name__ == '__main__':
       rl_crop = transforms.functional.crop(real.squeeze(), padding[1], padding[0], original_height, original_width)
       with torch.no_grad():
         y_crop = transforms.functional.crop(net(inputs).squeeze(), padding[1], padding[0], original_height, original_width)
+        y_crop = torch.clamp(y_crop, 0, 1)
         model_psnr = psnr(rl_crop,y_crop).item()
         PSNRs.append(model_psnr)
       

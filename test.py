@@ -35,6 +35,7 @@ def predict(image, net, device):
   with torch.no_grad():
     im, padding, original_width, original_height = compat_pad(image, 5)
     y = net(transforms.ToTensor()(im).unsqueeze(0).to(device)).squeeze()
+    y = torch.clamp(y, 0, 1)
     y = transforms.functional.crop(y, 2*padding[1], 2*padding[0], 2*original_height, 2*original_width)
     im = transforms.ToPILImage()(y)
     return im

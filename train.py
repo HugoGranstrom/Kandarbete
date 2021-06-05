@@ -165,7 +165,7 @@ if __name__ == '__main__':
               writer.add_scalar("loss/valid", validation_loss, i)
               writer.add_scalar("psnr/valid", psnr_score, i)
 
-              writer.add_image("validation image", net(speed_mini.unsqueeze(0)).squeeze(), i)
+              writer.add_image("validation image", torch.clamp(net(speed_mini.unsqueeze(0)).squeeze(), 0, 1), i)
               
 
               
