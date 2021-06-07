@@ -54,8 +54,8 @@ if __name__ == '__main__':
     print('cpu')
 
   device = torch.device(device_name)
-  
-  net = UNet(depth=5)
+  scale_power = common_parameters.scale_power
+  net = UNet(depth=5, scale_power=scale_power)
   loadNetEval(filename, net, device)
   net.to(device)
   net.eval()
@@ -76,10 +76,10 @@ if __name__ == '__main__':
     for i in range(len(files)):
       image = Image.open(files[i])
       image = image if image.mode == "RGB" else image.convert("RGB")
-      im, padding, original_width, original_height = compat_pad(image, 5)
+      im, padding, original_width, original_height = compat_pad(image, 5 + common_parameters.scale_power - 1)
       real = toTensor(im).unsqueeze(0)
       sz = im.size
-      inputs = toTensor(transforms.Resize((sz[1]//2,sz[0]//2), transforms.InterpolationMode.BILINEAR)(im)).unsqueeze(0)
+      inputs = toTensor(transforms.Resize((sz[1]//2**scale_power,sz[0]//2**scale_power), transforms.InterpolationMode.BILINEAR)(im)).unsqueeze(0)
     
     
       inputs = inputs.to(device)
@@ -92,10 +92,10 @@ if __name__ == '__main__':
         model_psnr = psnr(rl_crop,y_crop).item()
         PSNRs.append(model_psnr)
       
-      in_crop = transforms.functional.crop(inputs.squeeze(), padding[1]//2, padding[0]//2, original_height//2, original_width//2)
+      in_crop = transforms.functional.crop(inputs.squeeze(), padding[1]//2**scale_power, padding[0]//2**scale_power, original_height//2**scale_power, original_width//2**scale_power)
       rl_crop = transforms.functional.crop(real.squeeze(), padding[1], padding[0], original_height, original_width)
       im2 = transforms.ToPILImage()(in_crop)
-      rz_size = (im2.size[1]*2, im2.size[0]*2)
+      rz_size = (im2.size[1]*2**scale_power, im2.size[0]*2**scale_power)
       y_lanz = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.LANCZOS)(im2)).to(device)
       y_blin = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.BILINEAR)(im2)).to(device)
       y_bcub = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.BICUBIC)(im2)).to(device)
