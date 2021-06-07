@@ -56,15 +56,12 @@ class UpscaleBlock(nn.Module): # A*A*C -> 2A*2A*C/2
     return x
 
 class Decoder(nn.Module):
-  def __init__(self, nchannels, scale_power):
+  def __init__(self, nchannels, embedding_size):
     super().__init__()
     self.nchannels = nchannels
     self.upconvs = nn.ModuleList([UpscaleBlock(nchannels[i], nchannels[i]//2) for i in range(len(nchannels)-1)])
     self.blocks = nn.ModuleList([CnnBlock(nchannels[i], nchannels[i+1]) for i in range(len(nchannels)-1)])
-    self.finalBlocks = nn.Sequential(
-      *[UpscaleBlock(nchannels[-1], nchannels[-1]) for i in range(scale_power)],
-      nn.Sequential(nn.Conv2d(nchannels[-1], nchannels[-1], 3, padding=1), nn.LeakyReLU(negative_slope=0.2, inplace=True), nn.Conv2d(nchannels[-1], 3, 3, padding=1))
-    )
+    self.finalBlock = CnnBlock(nchannels[-1], embedding_size)
 
   def forward(self, x, encoder_features):
     for i in range(len(self.nchannels)-1):
@@ -74,41 +71,42 @@ class Decoder(nn.Module):
       temp = encoder_features[i]
       del temp
       encoder_features[i] = None
-    x = self.finalBlocks(x)
+    x = self.finalBlock(x)
     return x
 
 class UNet(nn.Module):
   # Important! The side lengths of the input image must be divisible depth times by 2. Add padding to nearest multiple when evaluating
   # Safe size: current_size + current_size % 2**(len(nchannels)-1) 
   # Pad to safe size, then crop to correct upscaled size afterwards
-  def __init__(self, depth=5, init_channels=64, scale_power=1):
+  def __init__(self, depth=5, init_channels=64, embedding_size=50):
     super().__init__()
     #nchannels=[64,128,256,512]
     self.nchannels = [init_channels * 2**i for i in range(depth)]
-    self.encoder = Encoder([3] + self.nchannels)
-    self.decoder = Decoder(self.nchannels[::-1], scale_power=scale_power) # reverse
+    self.encoder = Encoder([1] + self.nchannels)
+    self.decoder = Decoder(self.nchannels[::-1], embedding_size=embedding_size) # reverse
+    self.colorizer = nn.Sequential(*[CnnBlock(embedding_size, embedding_size) for i in range(3)], nn.Conv2d(embedding_size, 3, 3, padding=1))
 
   def forward(self, x):
     encoder_features = self.encoder(x)
-    out = self.decoder(encoder_features[::-1][0], encoder_features[::-1][1:])
+    embeddings = self.decoder(encoder_features[::-1][0], encoder_features[::-1][1:])
+    out = self.colorizer(embeddings)
     return out
 
 from torchsummary import summary
 import time
 
 if __name__ == "__main__":
-  x = torch.randn(2, 3, 32, 32)
-  scale_power = 1
-  net = UNet(scale_power=scale_power)
-  input_size = 256 // 2 ** scale_power
-  summary(net, (3, input_size, input_size), -1)
+  x = torch.randn(2, 1, 256, 256)
+  net = UNet(depth=5, embedding_size=50)
+  input_size = 128
+  summary(net, (1, input_size, input_size), -1)
   y = net(x)
   print(y.shape)
   optimizer = torch.optim.Adam(net.parameters(), lr=1e-4)
   start = time.monotonic()
   for _ in range(int(50)):
     net.zero_grad()
-    x = torch.zeros(1, 3, input_size, input_size)
+    x = torch.zeros(1, 1, input_size, input_size)
     loss = (1 - net(x)).mean()
     loss.backward()
     optimizer.step()

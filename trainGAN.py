@@ -50,8 +50,7 @@ if __name__ == '__main__':
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-  scale_power = common_parameters.scale_power
-  net = UNet(depth=5, scale_power=scale_power).to(device)
+  net = UNet(depth=5).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=common_parameters.learning_rate)
   
   disc = AdverserialModel(256).to(device)
@@ -97,11 +96,10 @@ if __name__ == '__main__':
 
   batch_size = common_parameters.batch_size
 
-  high_res = (256, 256)
-  low_res = (high_res[0] // 2**scale_power, high_res[1] // 2**scale_power)
+  image_size = (128, 128)
 
-  traindata = FolderSet(common_parameters.relative_path + "train", high_res_size=high_res, low_res_size=low_res, center=False)
-  validdata = FolderSet(common_parameters.relative_path + "valid", high_res_size=high_res, low_res_size=low_res, center=True)
+  traindata = FolderSet(common_parameters.relative_path + "train", image_size=image_size, center=False)
+  validdata = FolderSet(common_parameters.relative_path + "valid", image_size=image_size, center=True)
 
   dataset = DataLoader(traindata, batch_size=batch_size, num_workers = common_parameters.num_workers, shuffle=True)
   validation_dataset = DataLoader(validdata, batch_size=batch_size*2, num_workers = common_parameters.num_workers)
@@ -117,6 +115,7 @@ if __name__ == '__main__':
   i = iteration
   
   speed_mini = read_image("speed-mini.png", mode=ImageReadMode.RGB).to(device).float() / 255.0
+  speed_mini = speed_mini.mean(dim=0, keepdim=True)
   
   for epoch in range(10000):  # loop over the dataset multiple times
 
@@ -143,7 +142,7 @@ if __name__ == '__main__':
           fake_out = disc(fakes)
           errG = (torch.mean((real_out - torch.mean(fake_out) + 1)**2) + torch.mean((fake_out - torch.mean(real_out) - 1)**2))/2
           
-          loss = 0.001*errG + criterion(real, fakes)
+          loss = errG + criterion(real, fakes)
           loss.backward(retain_graph=True)
           optimizer.step()
 
@@ -203,7 +202,7 @@ if __name__ == '__main__':
               writer.add_scalar("valid/loss", validation_loss, i)
               writer.add_scalar("valid/PSNR", psnr_score, i)
 
-              writer.add_image("validation image", net(speed_mini.unsqueeze(0)).squeeze(), i)
+              writer.add_image("validation image", torch.clamp(net(speed_mini.unsqueeze(0)).squeeze(), 0, 1), i)
               
               print("Validation loss:", validation_loss, "Mean PSNR:", psnr_score)
               net.train()

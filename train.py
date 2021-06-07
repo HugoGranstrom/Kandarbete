@@ -30,7 +30,7 @@ import random
 
 from hqset import *
 from net import *
-from unet import *
+from unet_segTransfer import *
 from test import predict
 
 from collections import namedtuple
@@ -53,8 +53,7 @@ if __name__ == '__main__':
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
   
-  scale_power = common_parameters.scale_power
-  net = UNet(depth=5, scale_power=scale_power).to(device)
+  net = UNet(depth=5).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=common_parameters.learning_rate)
 
   if len(sys.argv) != 3: raise RuntimeError("Two command-line arguments must be given, the model's filename and the type of loss")
@@ -92,11 +91,10 @@ if __name__ == '__main__':
   
   batch_size = common_parameters.batch_size
 
-  high_res = (256, 256)
-  low_res = (high_res[0] // 2**scale_power, high_res[1] // 2**scale_power)
+  image_size = (128, 128)
 
-  traindata = FolderSet(common_parameters.relative_path + "train", high_res_size=high_res, low_res_size=low_res, center=False)
-  validdata = FolderSet(common_parameters.relative_path + "valid", high_res_size=high_res, low_res_size=low_res, center=True)
+  traindata = FolderSet(common_parameters.relative_path + "train", image_size=image_size, center=False)
+  validdata = FolderSet(common_parameters.relative_path + "valid", image_size=image_size, center=True)
 
   dataset = DataLoader(traindata, batch_size=batch_size, num_workers = common_parameters.num_workers, shuffle=True)
   validation_dataset = DataLoader(validdata, batch_size=16, num_workers = common_parameters.num_workers)
@@ -109,6 +107,8 @@ if __name__ == '__main__':
   save_every = common_parameters.save_every
   i = iteration
   speed_mini = read_image("speed-mini.png", mode=ImageReadMode.RGB).to(device).float() / 255.0
+  speed_mini = transforms.Resize((256, 256))(speed_mini)
+  speed_mini = speed_mini.mean(dim=0, keepdim=True).expand(3, -1, -1)
   for epoch in range(10000):  # loop over the dataset multiple times
 
       running_loss = []

@@ -39,23 +39,19 @@ class RandomDownsampling:
         return transforms.functional.resize(x, self.low_res_size, mode)
 
 class FolderSet(Dataset):
-  def __init__(this, root_dir, high_res_size = (256, 256), low_res_size = (128, 128), center=False):
-    this.high_res_size = high_res_size
-    this.low_res_size = low_res_size
+  def __init__(this, root_dir, image_size = (128, 128), center=False):
+    this.image_size = image_size
+    mean = torch.tensor([0.485, 0.456, 0.406])
+    std = torch.tensor([0.229, 0.224, 0.225]) # the biggest value that can be normalized to is 2.64
+    this.normalize = transforms.Normalize(mean.tolist(), std.tolist())
     if center:
-      this.crop_transform = transforms.CenterCrop(high_res_size)
+      this.crop_transform = transforms.Resize(image_size, transforms.InterpolationMode.LANCZOS)
     else:
       this.crop_transform = transforms.Compose([
-                                              transforms.RandomCrop(high_res_size, padding=None, pad_if_needed=True),
+                                              transforms.Resize(image_size, transforms.InterpolationMode.LANCZOS),
                                               transforms.RandomHorizontalFlip(),
                                               NinetiesRotation()
                                               ])
-    # Transforms a high-res image to a downscaled low-res image
-    this.X_transforms = transforms.Compose([
-                                            #transforms.GaussianBlur(3), #Simulate camera point
-                                            transforms.Resize(low_res_size, transforms.InterpolationMode.BILINEAR)
-                                            #RandomDownsampling(low_res_size)
-                                            ])
     this.toTensor = transforms.Compose([transforms.ToTensor()])
     
     this.files = glob.glob(f"{root_dir}/*.png")
@@ -72,8 +68,9 @@ class FolderSet(Dataset):
     
     transformed_im = this.crop_transform(im)
     Ys = this.toTensor(transformed_im)
-    Xs = this.toTensor(this.X_transforms(transformed_im))
-    
+    Xs = Ys.mean(dim=0, keepdim=True).expand(3, -1, -1)
+    Xs = this.normalize(Xs)
+
     return (Xs, Ys)
     
 class FolderSetFull(Dataset):
