@@ -36,7 +36,7 @@ def predict(image, net, device):
     im, padding, original_width, original_height = compat_pad(image, common_parameters.depth)
     y = net(transforms.ToTensor()(im).unsqueeze(0).to(device)).squeeze()
     y = torch.clamp(y, 0, 1)
-    y = transforms.functional.crop(y, 2*padding[1], 2*padding[0], 2*original_height, 2*original_width)
+    y = transforms.functional.crop(y, 2**common_parameters.scale_power*padding[1], 2**common_parameters.scale_power*padding[0], 2**common_parameters.scale_power*original_height, 2**common_parameters.scale_power*original_width)
     im = transforms.ToPILImage()(y)
     return im
 
@@ -59,14 +59,6 @@ if __name__ == '__main__':
     device_name = "cpu"
 
   device = torch.device(device_name)
-
-  factor_s = input("Enter dimension upscale factor: 2^")
-  if factor_s == "":
-    factor = 1
-    print("=2")
-  else:
-    factor = int(factor_s)
-    print("=",2**factor)
   
   net = UNet(depth=common_parameters.depth, scale_power=common_parameters.scale_power)
   loadNetEval(filename, net, device)
@@ -79,8 +71,6 @@ if __name__ == '__main__':
   plt.pause(0.05)
 
   im = predict(x, net, device)
-  for i in range(factor-1):
-    im = predict(im,net,device)
     
   im.save("result.png")
   plt.figure()
@@ -89,7 +79,7 @@ if __name__ == '__main__':
   plt.pause(0.05)
   
   fig = plt.figure()
-  y = transforms.Resize((x.size[1]*(2**factor), x.size[0]*(2**factor)), transforms.InterpolationMode.LANCZOS)(x)
+  y = transforms.Resize((x.size[1]*(2**common_parameters.scale_power), x.size[0]*(2**common_parameters.scale_power)), transforms.InterpolationMode.LANCZOS)(x)
   plt.imshow(y)
   plt.show()
   y.save("lanczos.png")
