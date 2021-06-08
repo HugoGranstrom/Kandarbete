@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
   device = torch.device(device_name)
   
-  net = UNet(depth=common_parameters.depth, scale_power=common_parameters.scale_power)
+  net = UNet(depth=common_parameters.depth, scale_power=common_parameters.scale_power, nblocks=common_parameters.nblocks)
   loadNetEval(filename, net, device)
   net.to(device)
   net.eval()

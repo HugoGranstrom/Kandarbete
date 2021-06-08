@@ -24,12 +24,31 @@ class CnnBlock(nn.Module):
       x = self.activation(x)
     return x
 
+class StackedBlocks(nn.Module):
+  def __init__(self, in_channels, out_channels, n_blocks):
+    super().__init__()
+    self.n_blocks = n_blocks
+    if n_blocks == 0: # one Conv2d
+      self.blocks = nn.Sequential(nn.Conv2d(in_channels, out_channels, 3, stride=1, padding=1), nn.ReLU())
+    elif n_blocks == 1: # two Conv2d with a skip connection
+      self.blocks = CnnBlock(in_channels, out_channels)
+    elif n_blocks > 1:
+      self.blocks = nn.Sequential(CnnBlock(in_channels, out_channels), *[CnnBlock(out_channels, out_channels) for i in range(n_blocks-1)])
+      self.skip = nn.Conv2d(in_channels, out_channels, 1)
+    else:
+      raise ValueError("n_blocks must be larger than 0, it was:", n_blocks)
+
+  def forward(self, x):
+    input_x = x
+    x = self.blocks(x)
+    return self.skip(input_x) + x if self.n_blocks > 1 else x
+
 class Encoder(nn.Module):
-  def __init__(self, nchannels):
+  def __init__(self, nchannels, nblocks):
     super().__init__()
     self.nchannels = nchannels
     self.pool = nn.MaxPool2d(2)
-    self.blocks = nn.ModuleList([CnnBlock(nchannels[i], nchannels[i+1]) for i in range(len(nchannels)-2)])
+    self.blocks = nn.ModuleList([StackedBlocks(nchannels[i], nchannels[i+1], nblocks) for i in range(len(nchannels)-2)])
     self.blocks.append(CnnBlock(nchannels[-2], nchannels[-1]))
 
   def forward(self, x):
@@ -81,11 +100,11 @@ class UNet(nn.Module):
   # Important! The side lengths of the input image must be divisible depth times by 2. Add padding to nearest multiple when evaluating
   # Safe size: current_size + current_size % 2**(len(nchannels)-1) 
   # Pad to safe size, then crop to correct upscaled size afterwards
-  def __init__(self, depth=5, init_channels=64, scale_power=1):
+  def __init__(self, depth=5, init_channels=64, scale_power=1, nblocks=1):
     super().__init__()
     #nchannels=[64,128,256,512]
     self.nchannels = [init_channels * 2**i for i in range(depth)]
-    self.encoder = Encoder([3] + self.nchannels)
+    self.encoder = Encoder([3] + self.nchannels, nblocks)
     self.decoder = Decoder(self.nchannels[::-1], scale_power=scale_power) # reverse
 
   def forward(self, x):
@@ -99,7 +118,7 @@ import time
 if __name__ == "__main__":
   x = torch.randn(2, 3, 32, 32)
   scale_power = 1
-  net = UNet(scale_power=scale_power)
+  net = UNet(scale_power=scale_power, nblocks=3)
   input_size = 256 // 2 ** scale_power
   summary(net, (3, input_size, input_size), -1)
   y = net(x)
