@@ -99,11 +99,6 @@ if __name__ == '__main__':
       y_lanz = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.LANCZOS)(im2)).to(device)
       y_blin = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.BILINEAR)(im2)).to(device)
       y_bcub = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.BICUBIC)(im2)).to(device)
-      if i == 0:
-          plt.figure()
-          plt.imshow(y_lanz.permute(1, 2, 0))
-          plt.show(block=False)
-          plt.pause(0.05)
       lanz_psnr = psnr(rl_crop,y_lanz).item()
       blin_psnr = psnr(rl_crop,y_blin).item()
       bcub_psnr = psnr(rl_crop,y_bcub).item()
