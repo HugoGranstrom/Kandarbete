@@ -1,5 +1,7 @@
-batch_size = 10
-scale_power = 1
+batch_size = 1
+scale_power = 2
+depth = 5
+nblocks = 1
 end_iterations = 25000
 learning_rate = 1e-4
 relative_path = './'

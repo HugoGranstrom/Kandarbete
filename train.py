@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
   
   scale_power = common_parameters.scale_power
-  net = UNet(depth=5, scale_power=scale_power).to(device)
+  net = UNet(depth=common_parameters.depth, scale_power=scale_power).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=common_parameters.learning_rate)
 
   if len(sys.argv) != 3: raise RuntimeError("Two command-line arguments must be given, the model's filename and the type of loss")

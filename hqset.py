@@ -19,6 +19,8 @@ import pandas as pd
 
 import random
 
+import common_parameters
+
 class NinetiesRotation:
     """Rotate by one of the given angles."""
 
@@ -89,7 +91,7 @@ class FolderSetFull(Dataset):
   def __getitem__(this,idx):
     image = Image.open(this.files[idx])
     image = image if image.mode == "RGB" else image.convert("RGB")
-    im, padding, original_width, original_height = this.compat_pad(image, 5)
+    im, padding, original_width, original_height = this.compat_pad(image, common_parameters.depth)
     Ys = this.toTensor(im)
     sz = im.size
     Xs = this.toTensor(transforms.Resize(((int)(sz[1]/2),(int)(sz[0]/2)), transforms.InterpolationMode.LANCZOS)(im))

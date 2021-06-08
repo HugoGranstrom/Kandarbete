@@ -33,7 +33,7 @@ def compat_pad(image, network_depth):
 
 def predict(image, net, device):
   with torch.no_grad():
-    im, padding, original_width, original_height = compat_pad(image, 5)
+    im, padding, original_width, original_height = compat_pad(image, common_parameters.depth)
     y = net(transforms.ToTensor()(im).unsqueeze(0).to(device)).squeeze()
     y = torch.clamp(y, 0, 1)
     y = transforms.functional.crop(y, 2*padding[1], 2*padding[0], 2*original_height, 2*original_width)
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     factor = int(factor_s)
     print("=",2**factor)
   
-  net = UNet(depth=5, scale_power=common_parameters.scale_power)
+  net = UNet(depth=common_parameters.depth, scale_power=common_parameters.scale_power)
   loadNetEval(filename, net, device)
   net.to(device)
   net.eval()

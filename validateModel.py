@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
   device = torch.device(device_name)
   scale_power = common_parameters.scale_power
-  net = UNet(depth=5, scale_power=scale_power)
+  net = UNet(depth=common_parameters.depth, scale_power=scale_power)
   loadNetEval(filename, net, device)
   net.to(device)
   net.eval()
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     for i in range(len(files)):
       image = Image.open(files[i])
       image = image if image.mode == "RGB" else image.convert("RGB")
-      im, padding, original_width, original_height = compat_pad(image, 5 + common_parameters.scale_power - 1)
+      im, padding, original_width, original_height = compat_pad(image, common_parameters.depth + common_parameters.scale_power - 1)
       real = toTensor(im).unsqueeze(0)
       sz = im.size
       inputs = toTensor(transforms.Resize((sz[1]//2**scale_power,sz[0]//2**scale_power), transforms.InterpolationMode.BILINEAR)(im)).unsqueeze(0)
@@ -99,6 +99,11 @@ if __name__ == '__main__':
       y_lanz = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.LANCZOS)(im2)).to(device)
       y_blin = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.BILINEAR)(im2)).to(device)
       y_bcub = toTensor(transforms.Resize(rz_size, transforms.InterpolationMode.BICUBIC)(im2)).to(device)
+      if i == 0:
+          plt.figure()
+          plt.imshow(y_lanz.permute(1, 2, 0))
+          plt.show(block=False)
+          plt.pause(0.05)
       lanz_psnr = psnr(rl_crop,y_lanz).item()
       blin_psnr = psnr(rl_crop,y_blin).item()
       bcub_psnr = psnr(rl_crop,y_bcub).item()

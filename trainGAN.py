@@ -51,7 +51,7 @@ if __name__ == '__main__':
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
   scale_power = common_parameters.scale_power
-  net = UNet(depth=5, scale_power=scale_power).to(device)
+  net = UNet(depth=common_parameters.depth, scale_power=scale_power).to(device)
   optimizer = torch.optim.Adam(net.parameters(), lr=common_parameters.learning_rate)
   
   disc = AdverserialModel(256).to(device)
