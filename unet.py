@@ -48,8 +48,8 @@ class Encoder(nn.Module):
     super().__init__()
     self.nchannels = nchannels
     self.pool = nn.MaxPool2d(2)
-    self.blocks = nn.ModuleList([StackedBlocks(nchannels[i], nchannels[i+1], nblocks) for i in range(len(nchannels)-2)])
-    self.blocks.append(CnnBlock(nchannels[-2], nchannels[-1]))
+    self.blocks = nn.ModuleList([StackedBlocks(nchannels[i], nchannels[i+1], nblocks) for i in range(len(nchannels)-1)])
+    #self.blocks.append(CnnBlock(nchannels[-2], nchannels[-1]))
 
   def forward(self, x):
     features = []
@@ -117,8 +117,8 @@ import time
 
 if __name__ == "__main__":
   x = torch.randn(2, 3, 32, 32)
-  scale_power = 1
-  net = UNet(scale_power=scale_power, nblocks=3)
+  scale_power = 2
+  net = UNet(scale_power=scale_power, nblocks=10)
   input_size = 256 // 2 ** scale_power
   summary(net, (3, input_size, input_size), -1)
   y = net(x)
